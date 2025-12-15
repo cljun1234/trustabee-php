@@ -49,11 +49,6 @@ input:checked + .slider:before { transform: translateX(24px); }
 }
 </style>
 
-<div class="main-content">
-    <div class="page-header">
-        <h1>Social Popup</h1>
-    </div>
-
     <!-- Active Toggle Card -->
     <div class="card mb-4">
         <div class="form-group toggle" style="margin-bottom: 0; padding: 10px 0;">
@@ -222,7 +217,6 @@ input:checked + .slider:before { transform: translateX(24px); }
         <button type="submit" class="btn btn-primary btn-lg w-100 mb-5">Save Changes</button>
 
     </form>
-</div>
 
 <script>
 function toggleSocialWidget(id, enabled) {

@@ -195,7 +195,7 @@
                     <a href="/campaigns/<?php echo $key; ?>" class="nav-link <?php echo $isSubActive ? 'active' : ''; ?>" style="<?php echo $isSubActive ? 'border-right: none; background: #f0f7ff; color: var(--primary-color); font-weight: 600;' : ''; ?>">
                         <i class="fa-solid <?php echo $feature['icon']; ?>"></i>
                         <?php echo $feature['label']; ?>
-                        <?php if(!in_array($key, ['live-conversion', 'live-visitors', 'coupon', 'announcement', 'video', 'newsletter'])): ?><span class="badge-demo">Demo</span><?php endif; ?>
+                        <?php if(!in_array($key, ['live-conversion', 'live-visitors', 'coupon', 'announcement', 'video', 'newsletter', 'social'])): ?><span class="badge-demo">Demo</span><?php endif; ?>
                     </a>
                 </li>
                 <?php endforeach; ?>

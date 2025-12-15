@@ -617,8 +617,15 @@ class WidgetController {
 
         const container = document.createElement('div');
         container.id = SOCIAL_CONTAINER_ID;
+
+        // Position Logic
+        let positionStyle = 'bottom: 20px; right: 20px;';
+        if (social.position === 'bottom-left') {
+            positionStyle = 'bottom: 20px; left: 20px;';
+        }
+
         container.style.cssText = `
-            position: fixed; bottom: 20px; right: 20px;
+            position: fixed; \${positionStyle}
             width: 300px; background: white;
             border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.15);
             z-index: 10000; font-family: sans-serif;
@@ -703,6 +710,10 @@ class WidgetController {
             if (link.platform === 'tiktok') iconColor = '#000000';
             if (link.platform === 'pinterest') iconColor = '#bd081c';
             if (link.platform === 'telegram') iconColor = '#0088cc';
+            if (link.platform === 'discord') iconColor = '#5865F2';
+            if (link.platform === 'reddit') iconColor = '#FF4500';
+            if (link.platform === 'snapchat') iconColor = '#FFFC00'; // Text should be black for snapchat usually, but white for consistency here
+            if (link.platform === 'spotify') iconColor = '#1DB954';
 
 
             // We try to render an SVG if possible, otherwise a colored block

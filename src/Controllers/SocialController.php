@@ -27,7 +27,7 @@ class SocialController {
     public function index($widget_id) {
         $pdo = Database::getInstance();
 
-        // Ensure widget belongs to user (redundant check if called from DashboardController, but safe)
+        // Ensure widget belongs to user
         if (!isset($_SESSION['user_id'])) { header('Location: /login'); exit; }
         $user_id = $_SESSION['user_id'];
 
@@ -38,7 +38,7 @@ class SocialController {
 
         if (!$social) {
             // Create default if not exists
-            $stmt = $pdo->prepare("INSERT INTO socials (widget_id, active) VALUES (?, 0)");
+            $stmt = $pdo->prepare("INSERT INTO socials (widget_id, active, position) VALUES (?, 0, 'bottom-right')");
             $stmt->execute([$widget_id]);
             $social_id = $pdo->lastInsertId();
 
@@ -54,7 +54,7 @@ class SocialController {
         $links = $stmt->fetchAll();
 
         // Prepare links map for easy access in view
-        $platforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'pinterest', 'whatsapp', 'telegram'];
+        $platforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'pinterest', 'whatsapp', 'telegram', 'discord', 'reddit', 'snapchat', 'spotify'];
         $links_map = [];
         foreach ($links as $link) {
             $links_map[$link['platform']] = $link;
@@ -76,19 +76,18 @@ class SocialController {
         $title = $_POST['title'] ?? 'Follow Us';
         $subtitle = $_POST['subtitle'] ?? '';
         $remove_branding = isset($_POST['remove_branding']) ? 1 : 0;
-        // Position is hardcoded to bottom-right per requirements, but kept in DB for flexibility
-        // $position = $_POST['position'] ?? 'bottom-right';
+        $position = $_POST['position'] ?? 'bottom-right';
 
         // Triggers
         $trigger_type = $_POST['trigger_type'] ?? 'delay';
         $trigger_delay = (int)($_POST['trigger_delay'] ?? 0);
         $frequency = $_POST['frequency'] ?? 'session';
 
-        $stmt = $pdo->prepare("UPDATE socials SET title = ?, subtitle = ?, remove_branding = ?, trigger_type = ?, trigger_delay = ?, frequency = ? WHERE id = ?");
-        $stmt->execute([$title, $subtitle, $remove_branding, $trigger_type, $trigger_delay, $frequency, $social_id]);
+        $stmt = $pdo->prepare("UPDATE socials SET title = ?, subtitle = ?, remove_branding = ?, position = ?, trigger_type = ?, trigger_delay = ?, frequency = ? WHERE id = ?");
+        $stmt->execute([$title, $subtitle, $remove_branding, $position, $trigger_type, $trigger_delay, $frequency, $social_id]);
 
         // Save Links
-        $platforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'pinterest', 'whatsapp', 'telegram'];
+        $platforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'pinterest', 'whatsapp', 'telegram', 'discord', 'reddit', 'snapchat', 'spotify'];
 
         // First reset all to inactive
         $stmt = $pdo->prepare("UPDATE social_links SET is_active = 0 WHERE social_id = ?");

@@ -83,6 +83,16 @@ input:checked + .slider:before { transform: translateX(24px); }
                             <label class="form-label">Subtitle</label>
                             <input type="text" class="form-control" name="subtitle" value="<?php echo htmlspecialchars($social['subtitle']); ?>" oninput="updatePreview()">
                         </div>
+
+                        <!-- Position Selector -->
+                        <div class="mb-3">
+                            <label class="form-label">Popup Position</label>
+                            <select class="form-select" name="position" id="positionSelect" onchange="updatePreview()">
+                                <option value="bottom-right" <?php echo ($social['position'] ?? 'bottom-right') === 'bottom-right' ? 'selected' : ''; ?>>Bottom Right</option>
+                                <option value="bottom-left" <?php echo ($social['position'] ?? 'bottom-right') === 'bottom-left' ? 'selected' : ''; ?>>Bottom Left</option>
+                            </select>
+                        </div>
+
                         <div class="form-group toggle mt-4">
                              <label style="font-size: 1rem; font-weight: normal;">Remove Branding</label>
                              <label class="switch">
@@ -97,6 +107,7 @@ input:checked + .slider:before { transform: translateX(24px); }
                         <label class="form-label text-muted">Live Preview</label>
                         <div class="widget-preview-container">
                             <!-- The Mock Widget -->
+                            <!-- Note: The position in Preview is fixed for display purposes, but we can simulate the "look" -->
                             <div id="previewWidget" style="background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); font-family: sans-serif; overflow: hidden; width: 300px;">
 
                                 <!-- Header -->
@@ -135,6 +146,7 @@ input:checked + .slider:before { transform: translateX(24px); }
             </div>
             <div class="card-body">
                 <div class="row">
+                    <div class="col-12">
                 <?php foreach ($platforms as $platform):
                     $link = $links_map[$platform] ?? null;
                     $isActive = $link && $link['is_active'];
@@ -144,7 +156,7 @@ input:checked + .slider:before { transform: translateX(24px); }
                     // Map platforms to FontAwesome icons
                     $faIcon = 'fa-share-alt';
                     if ($platform === 'facebook') $faIcon = 'fa-facebook-f';
-                    elseif ($platform === 'twitter') $faIcon = 'fa-twitter'; // or fa-x-twitter
+                    elseif ($platform === 'twitter') $faIcon = 'fa-twitter';
                     elseif ($platform === 'instagram') $faIcon = 'fa-instagram';
                     elseif ($platform === 'linkedin') $faIcon = 'fa-linkedin-in';
                     elseif ($platform === 'youtube') $faIcon = 'fa-youtube';
@@ -152,15 +164,16 @@ input:checked + .slider:before { transform: translateX(24px); }
                     elseif ($platform === 'pinterest') $faIcon = 'fa-pinterest-p';
                     elseif ($platform === 'whatsapp') $faIcon = 'fa-whatsapp';
                     elseif ($platform === 'telegram') $faIcon = 'fa-telegram';
+                    elseif ($platform === 'discord') $faIcon = 'fa-discord';
+                    elseif ($platform === 'reddit') $faIcon = 'fa-reddit-alien';
+                    elseif ($platform === 'snapchat') $faIcon = 'fa-snapchat';
+                    elseif ($platform === 'spotify') $faIcon = 'fa-spotify';
                 ?>
-                <div class="col-md-4 mb-4">
-                    <div class="p-3 border rounded h-100" style="background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div class="d-flex align-items-center">
-                                <i class="fa-brands <?php echo $faIcon; ?>" style="font-size: 1.2rem; margin-right: 10px; color: #555;"></i>
-                                <span style="font-weight: 600; font-size: 1rem;"><?php echo ucfirst($platform); ?></span>
-                            </div>
-                            <label class="switch scale-75" style="transform: scale(0.8);">
+                <div class="mb-3 border rounded p-3 bg-white">
+                    <!-- Row Header: Toggle | Icon | Name -->
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <label class="switch scale-75" style="transform: scale(0.8); margin-bottom: 0;">
                                 <input type="checkbox" class="platform-toggle"
                                        name="platform_<?php echo $platform; ?>_active"
                                        id="toggle_<?php echo $platform; ?>"
@@ -170,19 +183,26 @@ input:checked + .slider:before { transform: translateX(24px); }
                                 <span class="slider"></span>
                             </label>
                         </div>
+                        <div class="d-flex align-items-center" style="min-width: 150px;">
+                            <i class="fa-brands <?php echo $faIcon; ?>" style="font-size: 1.2rem; margin-right: 12px; color: #555; width: 24px; text-align: center;"></i>
+                            <span style="font-weight: 600; font-size: 1rem;"><?php echo ucfirst($platform); ?></span>
+                        </div>
+                    </div>
 
-                        <div id="settings_<?php echo $platform; ?>" style="display: <?php echo $isActive ? 'block' : 'none'; ?>; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #eee;">
-                            <div class="mb-2">
+                    <!-- Expanded Settings (Fields Below) -->
+                    <div id="settings_<?php echo $platform; ?>" style="display: <?php echo $isActive ? 'block' : 'none'; ?>; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee;">
+                        <div class="row">
+                            <div class="col-md-6">
                                 <label class="form-label" style="font-size: 0.8rem; margin-bottom: 2px;">Link URL</label>
-                                <input type="text" class="form-control form-control-sm"
+                                <input type="text" class="form-control"
                                        name="platform_<?php echo $platform; ?>_url"
                                        placeholder="https://..."
                                        value="<?php echo htmlspecialchars($url); ?>"
                                        oninput="updatePreview()">
                             </div>
-                            <div class="mb-0">
+                            <div class="col-md-6">
                                 <label class="form-label" style="font-size: 0.8rem; margin-bottom: 2px;">Button Label</label>
-                                <input type="text" class="form-control form-control-sm"
+                                <input type="text" class="form-control"
                                        name="platform_<?php echo $platform; ?>_label"
                                        placeholder="Label"
                                        value="<?php echo htmlspecialchars($label); ?>"
@@ -192,6 +212,7 @@ input:checked + .slider:before { transform: translateX(24px); }
                     </div>
                 </div>
                 <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -286,7 +307,8 @@ function updatePreview() {
     const linksContainer = document.getElementById('previewLinks');
     linksContainer.innerHTML = '';
 
-    const platforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'pinterest', 'whatsapp', 'telegram'];
+    // Platforms list needs to match PHP list
+    const platforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'pinterest', 'whatsapp', 'telegram', 'discord', 'reddit', 'snapchat', 'spotify'];
 
     platforms.forEach(p => {
         const toggle = document.getElementById('toggle_' + p);
@@ -312,13 +334,14 @@ function updatePreview() {
             if (p === 'tiktok') { iconColor = '#000000'; iconClass = 'fa-tiktok'; }
             if (p === 'pinterest') { iconColor = '#bd081c'; iconClass = 'fa-pinterest-p'; }
             if (p === 'telegram') { iconColor = '#0088cc'; iconClass = 'fa-telegram'; }
+            if (p === 'discord') { iconColor = '#5865F2'; iconClass = 'fa-discord'; }
+            if (p === 'reddit') { iconColor = '#FF4500'; iconClass = 'fa-reddit-alien'; }
+            if (p === 'snapchat') { iconColor = '#FFFC00'; iconClass = 'fa-snapchat'; }
+            if (p === 'spotify') { iconColor = '#1DB954'; iconClass = 'fa-spotify'; }
 
             item.innerHTML = `
                 <span style="width: 24px; height: 24px; background: \${iconColor}; border-radius: 4px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                    <!-- \${p.charAt(0).toUpperCase()} -->
-                    <!-- We use FontAwesome if available in preview context, or simple letter fallback if JS is standalone.
-                         The main site has FA loaded, so we try to inject <i> tag. -->
-                     <i class="fa-brands \${iconClass}" style="font-size: 14px;"></i>
+                     <i class="fa-brands \${iconClass}" style="font-size: 14px; color: \${p === 'snapchat' ? 'black' : 'white'};"></i>
                 </span>
                 <span style="font-weight: 500;">\${label}</span>
             `;

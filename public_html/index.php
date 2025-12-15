@@ -51,6 +51,10 @@ $router->map('GET', '/campaigns/newsletter/delete/[i:id]', 'NewsletterController
 $router->map('GET', '/campaigns/newsletter/leads/[i:id]', 'NewsletterController#leads', 'newsletter_leads');
 $router->map('GET', '/campaigns/newsletter/export/[i:id]', 'NewsletterController#export_leads', 'newsletter_export');
 
+// Social Popup
+$router->map('POST', '/api/social/save', 'SocialController#save', 'social_save');
+$router->map('POST', '/api/social/toggle', 'SocialController#toggle', 'social_toggle');
+
 // API / Widget
 $router->map('GET', '/api/widget.js', 'WidgetController#serveScript', 'widget_js');
 $router->map('GET', '/api/data', 'WidgetController#getData', 'widget_data');

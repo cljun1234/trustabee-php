@@ -1,4 +1,7 @@
 <?php
+$activePage = 'campaigns';
+$activeSubPage = 'social';
+$pageTitle = 'Social Popup';
 include __DIR__ . '/../layouts/header.php';
 ?>
 

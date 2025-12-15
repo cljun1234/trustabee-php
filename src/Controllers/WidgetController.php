@@ -26,12 +26,14 @@ class WidgetController {
     const ANNOUNCEMENT_CONTAINER_ID = 'trustabee-announcement-modal';
     const VIDEO_CONTAINER_ID = 'trustabee-video-modal';
     const NEWSLETTER_CONTAINER_ID = 'trustabee-newsletter-modal';
+    const SOCIAL_CONTAINER_ID = 'trustabee-social-widget';
 
     let data = [];
     let coupons = [];
     let announcements = [];
     let videos = [];
     let newsletters = [];
+    let socials = [];
     let currentIndex = 0;
     let widgetElement;
     let timerId;
@@ -65,6 +67,12 @@ class WidgetController {
             if (json.newsletters && json.newsletters.length > 0) {
                 newsletters = json.newsletters;
                 checkNewsletters();
+            }
+
+            // Store socials
+            if (json.socials && json.socials.length > 0) {
+                socials = json.socials;
+                checkSocials();
             }
 
             // Build queue
@@ -181,6 +189,20 @@ class WidgetController {
             navigator.sendBeacon(`\${API_BASE}/track-video`, payload);
         } else {
             fetch(`\${API_BASE}/track-video`, { method: 'POST', body: payload });
+        }
+    }
+
+    function trackSocialEvent(socialId, eventType, linkId = null) {
+        const payload = new URLSearchParams();
+        payload.append('w', WIDGET_ID);
+        payload.append('sid', socialId);
+        payload.append('type', eventType);
+        if (linkId) payload.append('lid', linkId);
+
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(`\${API_BASE}/track-social`, payload);
+        } else {
+            fetch(`\${API_BASE}/track-social`, { method: 'POST', body: payload });
         }
     }
 
@@ -561,6 +583,171 @@ class WidgetController {
         });
     }
 
+    // --- Social Widget Logic ---
+
+    function checkSocials() {
+        for (const social of socials) {
+            if (shouldShowItem(social, 'social')) {
+                // Check if session closed
+                if (social.frequency === 'session' && sessionStorage.getItem(`trustabee_social_closed_\${social.id}`)) {
+                    continue;
+                }
+                setupTrigger(social, showSocial);
+                return;
+            }
+        }
+    }
+
+    function showSocial(social) {
+        // We do NOT store "shown" timestamp in localStorage for frequency 'session'
+        // because the requirement says "Close it for the session only".
+        // This implies it shows on every page load unless closed in that session.
+        // But if frequency is 'every_load', it shows every time.
+        // Wait, standard triggers logic (shouldShowItem) handles frequency 'session' as "once every 30 mins".
+        // The user requirement "close it for the session only" is a "Hide" logic, not a "Show" logic.
+        // So we need to respect the explicit "close" action.
+
+        if (sessionStorage.getItem(`trustabee_social_closed_\${social.id}`)) {
+            return;
+        }
+
+        if (document.getElementById(SOCIAL_CONTAINER_ID)) return;
+
+        trackSocialEvent(social.id, 'view');
+
+        const container = document.createElement('div');
+        container.id = SOCIAL_CONTAINER_ID;
+        container.style.cssText = `
+            position: fixed; bottom: 20px; right: 20px;
+            width: 300px; background: white;
+            border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            z-index: 10000; font-family: sans-serif;
+            overflow: hidden; opacity: 0; transform: translateY(20px);
+            transition: all 0.4s ease;
+        `;
+
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            padding: 15px; text-align: center; border-bottom: 1px solid #f0f0f0;
+            position: relative;
+        `;
+
+        // Close Button
+        const closeBtn = document.createElement('div');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.cssText = `
+            position: absolute; top: 10px; right: 15px;
+            font-size: 20px; cursor: pointer; color: #999;
+            line-height: 1;
+        `;
+        closeBtn.onclick = () => {
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(20px)';
+            sessionStorage.setItem(`trustabee_social_closed_\${social.id}`, '1');
+            setTimeout(() => container.remove(), 400);
+        };
+        header.appendChild(closeBtn);
+
+        // Badge
+        const badge = document.createElement('span');
+        badge.textContent = social.title || 'Follow Us';
+        badge.style.cssText = `
+            background: #4ade80; color: #fff; padding: 4px 12px;
+            border-radius: 20px; font-size: 12px; font-weight: bold;
+            display: inline-block; margin-bottom: 8px;
+        `;
+        header.appendChild(badge);
+
+        // Subtitle
+        if (social.subtitle) {
+            const sub = document.createElement('p');
+            sub.textContent = social.subtitle;
+            sub.style.cssText = `
+                margin: 0; font-size: 13px; color: #666;
+                line-height: 1.4; padding: 0 10px;
+            `;
+            header.appendChild(sub);
+        }
+        container.appendChild(header);
+
+        // Links List
+        const list = document.createElement('div');
+        list.style.cssText = 'padding: 15px;';
+
+        social.links.forEach(link => {
+            const a = document.createElement('a');
+            a.href = link.url;
+            a.target = '_blank';
+            a.style.cssText = `
+                display: flex; align-items: center; text-decoration: none;
+                padding: 10px; margin-bottom: 8px; border: 1px dashed #ddd;
+                border-radius: 8px; color: #333; font-size: 14px;
+                transition: background 0.2s;
+            `;
+            a.onmouseover = () => a.style.background = '#f9f9f9';
+            a.onmouseout = () => a.style.background = 'transparent';
+            a.onclick = () => {
+                trackSocialEvent(social.id, 'click', link.id);
+            };
+
+            // Icon (Simple colored circles with first letter for now, or FontAwesome if available)
+            // Since we don't have FA loaded necessarily, we use simple generic icons or specific colors.
+            let iconColor = '#333';
+            if (link.platform === 'facebook') iconColor = '#1877f2';
+            if (link.platform === 'twitter') iconColor = '#1da1f2';
+            if (link.platform === 'instagram') iconColor = '#c32aa3';
+            if (link.platform === 'linkedin') iconColor = '#0a66c2';
+            if (link.platform === 'youtube') iconColor = '#ff0000';
+            if (link.platform === 'whatsapp') iconColor = '#25d366';
+            if (link.platform === 'tiktok') iconColor = '#000000';
+            if (link.platform === 'pinterest') iconColor = '#bd081c';
+            if (link.platform === 'telegram') iconColor = '#0088cc';
+
+
+            // We try to render an SVG if possible, otherwise a colored block
+            const iconBox = document.createElement('span');
+            iconBox.style.cssText = `
+                width: 24px; height: 24px; background: \${iconColor};
+                border-radius: 4px; margin-right: 10px; display: flex;
+                align-items: center; justify-content: center; color: white;
+                font-size: 14px; font-weight: bold;
+            `;
+            // Simple letter icon
+            iconBox.textContent = link.platform.charAt(0).toUpperCase();
+
+            a.appendChild(iconBox);
+
+            const text = document.createElement('span');
+            text.textContent = link.label_text || link.platform;
+            text.style.fontWeight = '500';
+            a.appendChild(text);
+
+            list.appendChild(a);
+        });
+        container.appendChild(list);
+
+        // Footer / Branding
+        if (!social.remove_branding) {
+            const footer = document.createElement('div');
+            footer.style.cssText = `
+                text-align: center; padding-bottom: 10px; font-size: 10px;
+                color: #1a73e8; cursor: pointer;
+            `;
+            footer.textContent = 'Verified by Trustabee';
+            footer.onclick = () => window.open('https://trustabee.io', '_blank');
+            container.appendChild(footer);
+        }
+
+        document.body.appendChild(container);
+
+        // Animate In
+        requestAnimationFrame(() => {
+            container.style.opacity = '1';
+            container.style.transform = 'translateY(0)';
+        });
+    }
+
     // --- Generic Modal Builder ---
 
     function createModal(containerId, item, contentCallback) {
@@ -867,6 +1054,18 @@ JS;
         $stmt->execute([$widget_id]);
         $newsletters = $stmt->fetchAll();
 
+        // Fetch active social widgets
+        $stmt = $pdo->prepare("SELECT * FROM socials WHERE widget_id = ? AND active = 1");
+        $stmt->execute([$widget_id]);
+        $socials = $stmt->fetchAll();
+
+        // Attach links to socials
+        foreach ($socials as &$social) {
+            $stmt = $pdo->prepare("SELECT * FROM social_links WHERE social_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC LIMIT 5");
+            $stmt->execute([$social['id']]);
+            $social['links'] = $stmt->fetchAll();
+        }
+
         // 1. Live Visitors (Active in last 30 minutes, distinct)
         $stmt = $pdo->prepare("SELECT COUNT(DISTINCT visitor_id) as count FROM live_visitors WHERE widget_id = ? AND last_seen > (NOW() - INTERVAL 30 MINUTE)");
         $stmt->execute([$widget_id]);
@@ -924,6 +1123,7 @@ JS;
             'announcements' => $announcements,
             'videos' => $videos,
             'newsletters' => $newsletters,
+            'socials' => $socials,
             'live_count' => $live_count,
             'historical_count' => $historical_count,
             'notifications' => $notifications
@@ -1036,6 +1236,20 @@ JS;
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("INSERT INTO newsletter_analytics (newsletter_id, event_type, created_at) VALUES (?, ?, NOW())");
         $stmt->execute([$newsletter_id, $type]);
+    }
+
+    public function trackSocial() {
+        $this->addCors();
+        $widget_id = $_POST['w'] ?? 0;
+        $social_id = $_POST['sid'] ?? 0;
+        $type = $_POST['type'] ?? 'unknown';
+        $link_id = $_POST['lid'] ?? null;
+
+        if (!$widget_id || !$social_id) return;
+
+        $pdo = Database::getInstance();
+        $stmt = $pdo->prepare("INSERT INTO social_analytics (social_id, link_id, event_type, created_at) VALUES (?, ?, ?, NOW())");
+        $stmt->execute([$social_id, $link_id, $type]);
     }
 
     public function submitNewsletter() {

@@ -60,6 +60,7 @@ $router->map('POST', '/api/track-coupon', 'WidgetController#trackCoupon', 'widge
 $router->map('POST', '/api/track-announcement', 'WidgetController#trackAnnouncement', 'widget_track_announcement');
 $router->map('POST', '/api/track-video', 'WidgetController#trackVideo', 'widget_track_video');
 $router->map('POST', '/api/track-newsletter', 'WidgetController#trackNewsletter', 'widget_track_newsletter');
+$router->map('POST', '/api/track-social', 'WidgetController#trackSocial', 'widget_track_social');
 $router->map('POST', '/api/submit-newsletter', 'WidgetController#submitNewsletter', 'widget_submit_newsletter');
 
 // Match request

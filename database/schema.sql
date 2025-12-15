@@ -214,3 +214,42 @@ CREATE TABLE IF NOT EXISTS newsletter_analytics (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (newsletter_id) REFERENCES newsletters(id) ON DELETE CASCADE
 );
+
+-- Social Widgets
+CREATE TABLE IF NOT EXISTS socials (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    widget_id INT NOT NULL,
+    active BOOLEAN DEFAULT 1,
+    title VARCHAR(255) DEFAULT 'Follow Us',
+    subtitle VARCHAR(255) DEFAULT 'Feel free to follow and connect with us at our social networks',
+    remove_branding BOOLEAN DEFAULT 0,
+    position VARCHAR(50) DEFAULT 'bottom-right',
+    trigger_type VARCHAR(50) DEFAULT 'delay',
+    trigger_delay INT DEFAULT 0,
+    frequency VARCHAR(50) DEFAULT 'session',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (widget_id) REFERENCES widgets(id) ON DELETE CASCADE
+);
+
+-- Social Links
+CREATE TABLE IF NOT EXISTS social_links (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    social_id INT NOT NULL,
+    platform VARCHAR(50) NOT NULL,
+    url TEXT,
+    label_text VARCHAR(255),
+    is_active BOOLEAN DEFAULT 0,
+    sort_order INT DEFAULT 0,
+    FOREIGN KEY (social_id) REFERENCES socials(id) ON DELETE CASCADE
+);
+
+-- Social Analytics
+CREATE TABLE IF NOT EXISTS social_analytics (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    social_id INT NOT NULL,
+    link_id INT DEFAULT NULL,
+    event_type VARCHAR(50) NOT NULL, -- 'view', 'click'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (social_id) REFERENCES socials(id) ON DELETE CASCADE,
+    FOREIGN KEY (link_id) REFERENCES social_links(id) ON DELETE SET NULL
+);

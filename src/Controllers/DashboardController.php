@@ -140,6 +140,11 @@ class DashboardController {
              $nc = new NewsletterController();
              $nc->index($widget['id']);
 
+        } elseif ($type === 'social') {
+             require_once __DIR__ . '/SocialController.php';
+             $sc = new SocialController();
+             $sc->index($widget['id']);
+
         } else {
             // Generic placeholder
             $campaignType = $type;

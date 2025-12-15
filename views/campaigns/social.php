@@ -140,16 +140,25 @@ input:checked + .slider:before { transform: translateX(24px); }
                     $isActive = $link && $link['is_active'];
                     $url = $link['url'] ?? '';
                     $label = $link['label_text'] ?? "Join us on " . ucfirst($platform);
+
+                    // Map platforms to FontAwesome icons
+                    $faIcon = 'fa-share-alt';
+                    if ($platform === 'facebook') $faIcon = 'fa-facebook-f';
+                    elseif ($platform === 'twitter') $faIcon = 'fa-twitter'; // or fa-x-twitter
+                    elseif ($platform === 'instagram') $faIcon = 'fa-instagram';
+                    elseif ($platform === 'linkedin') $faIcon = 'fa-linkedin-in';
+                    elseif ($platform === 'youtube') $faIcon = 'fa-youtube';
+                    elseif ($platform === 'tiktok') $faIcon = 'fa-tiktok';
+                    elseif ($platform === 'pinterest') $faIcon = 'fa-pinterest-p';
+                    elseif ($platform === 'whatsapp') $faIcon = 'fa-whatsapp';
+                    elseif ($platform === 'telegram') $faIcon = 'fa-telegram';
                 ?>
-                <div class="col-md-6 mb-3">
-                    <div class="p-3 border rounded h-100" style="background: #f9f9f9;">
+                <div class="col-md-4 mb-4">
+                    <div class="p-3 border rounded h-100" style="background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div class="d-flex align-items-center">
-                                <!-- Simple Icon Placeholder -->
-                                <div style="width: 24px; height: 24px; background: #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: #555; font-weight: bold;">
-                                    <?php echo strtoupper(substr($platform, 0, 1)); ?>
-                                </div>
-                                <span style="font-weight: 600;"><?php echo ucfirst($platform); ?></span>
+                                <i class="fa-brands <?php echo $faIcon; ?>" style="font-size: 1.2rem; margin-right: 10px; color: #555;"></i>
+                                <span style="font-weight: 600; font-size: 1rem;"><?php echo ucfirst($platform); ?></span>
                             </div>
                             <label class="switch scale-75" style="transform: scale(0.8);">
                                 <input type="checkbox" class="platform-toggle"
@@ -162,8 +171,9 @@ input:checked + .slider:before { transform: translateX(24px); }
                             </label>
                         </div>
 
-                        <div id="settings_<?php echo $platform; ?>" style="display: <?php echo $isActive ? 'block' : 'none'; ?>; margin-top: 10px;">
+                        <div id="settings_<?php echo $platform; ?>" style="display: <?php echo $isActive ? 'block' : 'none'; ?>; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #eee;">
                             <div class="mb-2">
+                                <label class="form-label" style="font-size: 0.8rem; margin-bottom: 2px;">Link URL</label>
                                 <input type="text" class="form-control form-control-sm"
                                        name="platform_<?php echo $platform; ?>_url"
                                        placeholder="https://..."
@@ -171,9 +181,10 @@ input:checked + .slider:before { transform: translateX(24px); }
                                        oninput="updatePreview()">
                             </div>
                             <div class="mb-0">
+                                <label class="form-label" style="font-size: 0.8rem; margin-bottom: 2px;">Button Label</label>
                                 <input type="text" class="form-control form-control-sm"
                                        name="platform_<?php echo $platform; ?>_label"
-                                       placeholder="Label (e.g. Follow us)"
+                                       placeholder="Label"
                                        value="<?php echo htmlspecialchars($label); ?>"
                                        oninput="updatePreview()">
                             </div>
@@ -291,19 +302,23 @@ function updatePreview() {
             `;
 
             let iconColor = '#333';
-            if (p === 'facebook') iconColor = '#1877f2';
-            if (p === 'twitter') iconColor = '#1da1f2';
-            if (p === 'instagram') iconColor = '#c32aa3';
-            if (p === 'linkedin') iconColor = '#0a66c2';
-            if (p === 'youtube') iconColor = '#ff0000';
-            if (p === 'whatsapp') iconColor = '#25d366';
-            if (p === 'tiktok') iconColor = '#000000';
-            if (p === 'pinterest') iconColor = '#bd081c';
-            if (p === 'telegram') iconColor = '#0088cc';
+            let iconClass = 'fa-share-alt';
+            if (p === 'facebook') { iconColor = '#1877f2'; iconClass = 'fa-facebook-f'; }
+            if (p === 'twitter') { iconColor = '#1da1f2'; iconClass = 'fa-twitter'; }
+            if (p === 'instagram') { iconColor = '#c32aa3'; iconClass = 'fa-instagram'; }
+            if (p === 'linkedin') { iconColor = '#0a66c2'; iconClass = 'fa-linkedin-in'; }
+            if (p === 'youtube') { iconColor = '#ff0000'; iconClass = 'fa-youtube'; }
+            if (p === 'whatsapp') { iconColor = '#25d366'; iconClass = 'fa-whatsapp'; }
+            if (p === 'tiktok') { iconColor = '#000000'; iconClass = 'fa-tiktok'; }
+            if (p === 'pinterest') { iconColor = '#bd081c'; iconClass = 'fa-pinterest-p'; }
+            if (p === 'telegram') { iconColor = '#0088cc'; iconClass = 'fa-telegram'; }
 
             item.innerHTML = `
                 <span style="width: 24px; height: 24px; background: \${iconColor}; border-radius: 4px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                    \${p.charAt(0).toUpperCase()}
+                    <!-- \${p.charAt(0).toUpperCase()} -->
+                    <!-- We use FontAwesome if available in preview context, or simple letter fallback if JS is standalone.
+                         The main site has FA loaded, so we try to inject <i> tag. -->
+                     <i class="fa-brands \${iconClass}" style="font-size: 14px;"></i>
                 </span>
                 <span style="font-weight: 500;">\${label}</span>
             `;

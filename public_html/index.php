@@ -55,6 +55,11 @@ $router->map('GET', '/campaigns/newsletter/export/[i:id]', 'NewsletterController
 $router->map('POST', '/api/social/save', 'SocialController#save', 'social_save');
 $router->map('POST', '/api/social/toggle', 'SocialController#toggle', 'social_toggle');
 
+// Reviews
+$router->map('POST', '/campaigns/review/save', 'ReviewController#save', 'review_save');
+$router->map('POST', '/campaigns/review/item/save', 'ReviewController#saveItem', 'review_item_save');
+$router->map('GET', '/campaigns/review/item/delete/[i:id]', 'ReviewController#deleteItem', 'review_item_delete');
+
 // API / Widget
 $router->map('GET', '/api/widget.js', 'WidgetController#serveScript', 'widget_js');
 $router->map('GET', '/api/data', 'WidgetController#getData', 'widget_data');
@@ -65,6 +70,8 @@ $router->map('POST', '/api/track-announcement', 'WidgetController#trackAnnouncem
 $router->map('POST', '/api/track-video', 'WidgetController#trackVideo', 'widget_track_video');
 $router->map('POST', '/api/track-newsletter', 'WidgetController#trackNewsletter', 'widget_track_newsletter');
 $router->map('POST', '/api/track-social', 'WidgetController#trackSocial', 'widget_track_social');
+$router->map('POST', '/api/track-review', 'WidgetController#trackReview', 'widget_track_review');
+$router->map('POST', '/api/submit-review', 'WidgetController#submitReview', 'widget_submit_review');
 $router->map('POST', '/api/submit-newsletter', 'WidgetController#submitNewsletter', 'widget_submit_newsletter');
 
 // Match request

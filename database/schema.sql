@@ -253,3 +253,80 @@ CREATE TABLE IF NOT EXISTS social_analytics (
     FOREIGN KEY (social_id) REFERENCES socials(id) ON DELETE CASCADE,
     FOREIGN KEY (link_id) REFERENCES social_links(id) ON DELETE SET NULL
 );
+
+-- Reviews Configuration (One per widget, similar to Newsletters but handling both widget/popup config)
+CREATE TABLE IF NOT EXISTS reviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    widget_id INT NOT NULL,
+
+    -- Popup Configuration
+    popup_title VARCHAR(255) DEFAULT 'Rate your experience',
+    popup_description TEXT,
+    google_review_link VARCHAR(255) DEFAULT NULL,
+    facebook_review_link VARCHAR(255) DEFAULT NULL,
+
+    -- Post Action Logic (4-5 stars)
+    high_star_action VARCHAR(50) DEFAULT 'thank_you', -- 'thank_you', 'coupon', 'redirect', 'close'
+    high_star_message TEXT, -- For 'thank_you'
+    high_star_coupon_id INT DEFAULT NULL,
+    high_star_redirect_url VARCHAR(255) DEFAULT NULL,
+
+    -- Post Action Logic (1-3 stars)
+    low_star_action VARCHAR(50) DEFAULT 'thank_you',
+    low_star_message TEXT,
+    low_star_coupon_id INT DEFAULT NULL,
+    low_star_redirect_url VARCHAR(255) DEFAULT NULL,
+
+    -- Triggers (for Popup)
+    trigger_type VARCHAR(50) DEFAULT 'delay',
+    trigger_delay INT DEFAULT 0,
+    frequency VARCHAR(50) DEFAULT 'every_load',
+    match_url VARCHAR(255) DEFAULT NULL,
+
+    -- Widget (Toaster) Configuration
+    show_reviews_widget BOOLEAN DEFAULT 0, -- Toggle for the toaster widget
+    widget_position VARCHAR(50) DEFAULT 'bottom-right',
+
+    remove_branding BOOLEAN DEFAULT 0,
+    active BOOLEAN DEFAULT 1, -- Global toggle for the feature
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (widget_id) REFERENCES widgets(id) ON DELETE CASCADE
+);
+
+-- Manual Review Items (for the Toaster Widget)
+CREATE TABLE IF NOT EXISTS review_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    review_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    review_text TEXT,
+    rating INT DEFAULT 5,
+    image_url VARCHAR(255) DEFAULT NULL,
+    source VARCHAR(50) DEFAULT 'custom', -- 'facebook', 'google', 'custom'
+    source_link VARCHAR(255) DEFAULT NULL,
+    active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
+);
+
+-- Feedback Submissions (1-3 stars)
+CREATE TABLE IF NOT EXISTS review_feedbacks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    review_id INT NOT NULL,
+    widget_id INT NOT NULL,
+    rating INT NOT NULL,
+    name VARCHAR(255),
+    email VARCHAR(255),
+    feedback TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+    FOREIGN KEY (widget_id) REFERENCES widgets(id) ON DELETE CASCADE
+);
+
+-- Analytics
+CREATE TABLE IF NOT EXISTS review_analytics (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    review_id INT NOT NULL,
+    event_type VARCHAR(50) NOT NULL, -- 'view_popup', 'click_star_1'...'click_star_5'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
+);

@@ -145,6 +145,11 @@ class DashboardController {
              $sc = new SocialController();
              $sc->index($widget['id']);
 
+        } elseif ($type === 'reviews') {
+             require_once __DIR__ . '/ReviewController.php';
+             $rc = new ReviewController();
+             $rc->index($widget['id']);
+
         } else {
             // Generic placeholder
             $campaignType = $type;

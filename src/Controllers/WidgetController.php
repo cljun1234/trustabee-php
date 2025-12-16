@@ -27,6 +27,7 @@ class WidgetController {
     const VIDEO_CONTAINER_ID = 'trustabee-video-modal';
     const NEWSLETTER_CONTAINER_ID = 'trustabee-newsletter-modal';
     const SOCIAL_CONTAINER_ID = 'trustabee-social-widget';
+    const REVIEW_CONTAINER_ID = 'trustabee-review-modal';
 
     let data = [];
     let coupons = [];
@@ -34,6 +35,7 @@ class WidgetController {
     let videos = [];
     let newsletters = [];
     let socials = [];
+    let reviewConfig = null;
     let currentIndex = 0;
     let widgetElement;
     let timerId;
@@ -73,6 +75,12 @@ class WidgetController {
             if (json.socials && json.socials.length > 0) {
                 socials = json.socials;
                 checkSocials();
+            }
+
+            // Store Review Config (Popup)
+            if (json.review_config && json.review_config.active == 1) {
+                reviewConfig = json.review_config;
+                checkReviews();
             }
 
             // Build queue
@@ -203,6 +211,19 @@ class WidgetController {
             navigator.sendBeacon(`\${API_BASE}/track-social`, payload);
         } else {
             fetch(`\${API_BASE}/track-social`, { method: 'POST', body: payload });
+        }
+    }
+
+    function trackReviewEvent(reviewId, eventType) {
+        const payload = new URLSearchParams();
+        payload.append('w', WIDGET_ID);
+        payload.append('rid', reviewId);
+        payload.append('type', eventType);
+
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(`\${API_BASE}/track-review`, payload);
+        } else {
+            fetch(`\${API_BASE}/track-review`, { method: 'POST', body: payload });
         }
     }
 
@@ -583,6 +604,239 @@ class WidgetController {
         });
     }
 
+    // --- Review Popup Logic ---
+
+    function checkReviews() {
+        if (!reviewConfig) return;
+
+        // Use standard trigger logic
+        // We pass reviewConfig as the item, but need to adapt properties if names differ
+        // reviewConfig has trigger_type, trigger_delay, frequency, match_url, id
+        if (shouldShowItem(reviewConfig, 'review_popup')) {
+             setupTrigger(reviewConfig, showReviewPopup);
+        }
+    }
+
+    function showReviewPopup(config) {
+        const storageKey = `trustabee_review_popup_shown_\${config.id}`;
+        localStorage.setItem(storageKey, new Date().getTime());
+
+        if (document.getElementById(REVIEW_CONTAINER_ID)) return;
+
+        trackReviewEvent(config.id, 'view_popup');
+
+        // Manual Modal Build (since it has custom logic)
+        const modal = document.createElement('div');
+        modal.id = REVIEW_CONTAINER_ID;
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+            font-family: sans-serif; opacity: 0; transition: opacity 0.3s;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: #fff; color: #333;
+            padding: 30px; border-radius: 12px;
+            width: 90%; max-width: 450px;
+            text-align: center; position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transform: scale(0.9); transition: transform 0.3s;
+        `;
+
+        // Close Button
+        const closeBtn = document.createElement('div');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.cssText = `
+            position: absolute; top: 10px; right: 15px;
+            font-size: 24px; cursor: pointer; opacity: 0.6;
+            z-index: 10;
+        `;
+        closeBtn.onclick = () => {
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 300);
+        };
+        content.appendChild(closeBtn);
+
+        // Title
+        const title = document.createElement('h2');
+        title.textContent = config.popup_title || 'Rate your experience';
+        title.style.margin = '0 0 10px 0';
+        content.appendChild(title);
+
+        // Desc
+        if (config.popup_description) {
+            const desc = document.createElement('p');
+            desc.textContent = config.popup_description;
+            desc.style.cssText = 'margin: 0 0 20px 0; font-size: 16px; opacity: 0.8;';
+            content.appendChild(desc);
+        }
+
+        // Stars Container
+        const stars = document.createElement('div');
+        stars.style.fontSize = '32px';
+        stars.style.color = '#ccc';
+        stars.style.cursor = 'pointer';
+        stars.style.marginBottom = '20px';
+
+        for (let i = 1; i <= 5; i++) {
+            const star = document.createElement('span');
+            star.innerHTML = '&#9733;'; // Star char
+            star.dataset.value = i;
+            star.style.margin = '0 5px';
+            star.onmouseover = () => highlightStars(i);
+            star.onmouseout = () => highlightStars(0);
+            star.onclick = () => handleRating(i, config, content, modal);
+            stars.appendChild(star);
+        }
+
+        function highlightStars(val) {
+            Array.from(stars.children).forEach(s => {
+                 s.style.color = (parseInt(s.dataset.value) <= val) ? '#fbbf24' : '#ccc';
+            });
+        }
+
+        content.appendChild(stars);
+
+        // Branding
+        if (!config.remove_branding) {
+             const branding = document.createElement('div');
+             branding.textContent = 'Powered by Trustabee';
+             branding.style.cssText = 'font-size: 10px; color: #999; margin-top: 15px;';
+             content.appendChild(branding);
+        }
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        requestAnimationFrame(() => {
+            modal.style.opacity = '1';
+            content.style.transform = 'scale(1)';
+        });
+    }
+
+    function handleRating(rating, config, container, modal) {
+        trackReviewEvent(config.id, 'click_star_' + rating);
+
+        if (rating >= 4) {
+             // HIGH RATING Logic
+
+             // Open Link if exists
+             // Prioritize Google, then Facebook (or user choice? config has both)
+             // Logic: If both, maybe show buttons? Or just open one?
+             // Requirement says: "if click will new tab them to the review link in Facebook/Google"
+             // Let's assume Google first if avail, else FB.
+             let url = config.google_review_link || config.facebook_review_link;
+             if (url) {
+                 window.open(url, '_blank');
+             }
+
+             // Wait 3 seconds then show Post Action
+             container.innerHTML = '<div style="padding:40px;">Processing...</div>';
+             setTimeout(() => {
+                 handlePostAction(config, 'high', container, modal);
+             }, 3000);
+
+        } else {
+            // LOW RATING Logic (Form)
+            showFeedbackForm(config, container, modal, rating);
+        }
+    }
+
+    function showFeedbackForm(config, container, modal, rating) {
+        container.innerHTML = '';
+
+        const title = document.createElement('h3');
+        title.textContent = 'How can we improve?';
+        container.appendChild(title);
+
+        const form = document.createElement('form');
+        form.style.textAlign = 'left';
+
+        const nameIn = document.createElement('input');
+        nameIn.placeholder = 'Name';
+        nameIn.name = 'name';
+        nameIn.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box;';
+        form.appendChild(nameIn);
+
+        const emailIn = document.createElement('input');
+        emailIn.placeholder = 'Email';
+        emailIn.name = 'email';
+        emailIn.type = 'email';
+        emailIn.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box;';
+        form.appendChild(emailIn);
+
+        const fbIn = document.createElement('textarea');
+        fbIn.placeholder = 'Your feedback...';
+        fbIn.name = 'feedback';
+        fbIn.rows = 3;
+        fbIn.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box;';
+        form.appendChild(fbIn);
+
+        const btn = document.createElement('button');
+        btn.textContent = 'Submit Feedback';
+        btn.style.cssText = 'width: 100%; padding: 10px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer;';
+        form.appendChild(btn);
+
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const fd = new FormData(form);
+            fd.append('w', WIDGET_ID);
+            fd.append('rid', config.id);
+            fd.append('rating', rating);
+
+            fetch(`\${API_BASE}/submit-review`, {method:'POST', body:fd})
+            .then(r=>r.json())
+            .then(res => {
+                 handlePostAction(config, 'low', container, modal);
+            });
+        };
+
+        container.appendChild(form);
+
+        // Add close button back
+        const closeBtn = document.createElement('div');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.cssText = `
+            position: absolute; top: 10px; right: 15px;
+            font-size: 24px; cursor: pointer; opacity: 0.6;
+        `;
+        closeBtn.onclick = () => { modal.remove(); };
+        container.appendChild(closeBtn);
+    }
+
+    function handlePostAction(config, type, container, modal) {
+        const action = config[type + '_star_action'];
+        const message = config[type + '_star_message'];
+        const redirect = config[type + '_star_redirect_url'];
+        const couponId = config[type + '_star_coupon_id'];
+
+        container.innerHTML = '';
+
+        if (action === 'close') {
+            modal.remove();
+        } else if (action === 'redirect' && redirect) {
+            window.location.href = redirect;
+        } else if (action === 'coupon' && couponId) {
+            // Find coupon data
+            const coupon = coupons.find(c => c.id == couponId);
+            if (coupon) {
+                // Show Coupon Modal logic (reuse showCoupon?)
+                // Since showCoupon creates a new modal, let's close this one and call showCoupon
+                modal.remove();
+                showCoupon(coupon);
+            } else {
+                container.innerHTML = '<p>Coupon not found.</p>';
+                setTimeout(() => modal.remove(), 2000);
+            }
+        } else {
+            // Thank You Message
+            container.innerHTML = `<div style="padding:40px; color: green; font-size: 18px;">\${message || 'Thank you!'}</div>`;
+            setTimeout(() => modal.remove(), 3000);
+        }
+    }
+
     // --- Social Widget Logic ---
 
     function checkSocials() {
@@ -920,15 +1174,49 @@ class WidgetController {
         mapEl.style.display = 'block';
 
         if (item.type === 'live_count') {
-            mapEl.style.display = 'none'; // Hide map for simple count, or show eye icon
+            mapEl.style.display = 'none';
             nameEl.textContent = 'Live Visitors';
             actionEl.textContent = item.text;
         } else if (item.type === 'historical') {
             mapEl.style.display = 'none';
             nameEl.textContent = 'Popular';
             actionEl.textContent = item.text;
+        } else if (item.type === 'review') {
+            // Review Item in Toaster
+            mapEl.style.display = 'block';
+
+            // Image
+            if (item.image_url) {
+                mapEl.innerHTML = `<img src="\${item.image_url}" alt="user" />`;
+            } else {
+                // Fallback: First letter
+                const letter = item.name.charAt(0).toUpperCase();
+                mapEl.innerHTML = `<div style="width:100%;height:100%;background:#1a73e8;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:24px;">\${letter}</div>`;
+            }
+
+            // Stars
+            let stars = '';
+            for(let i=0; i<item.rating; i++) stars += '&#9733;';
+
+            nameEl.innerHTML = `\${item.name} <span style="color:#fbbf24">\${stars}</span>`;
+
+            // Text + Link
+            let text = item.review_text.substring(0, 50);
+            if(item.review_text.length > 50) text += '...';
+
+            let sourceHtml = '';
+            if (item.source !== 'custom' && item.source_link) {
+                 const sName = item.source.charAt(0).toUpperCase() + item.source.slice(1);
+                 sourceHtml = ` <a href="\${item.source_link}" target="_blank" style="color:#1a73e8;text-decoration:none;font-size:11px;">View on \${sName}</a>`;
+            }
+
+            actionEl.innerHTML = `"\${text}"\${sourceHtml}`;
+
         } else {
             // Normal notification
+            // Reset map
+            mapEl.innerHTML = `<img src="https://provely-public.s3.amazonaws.com/images/maps/default.jpg" alt="map" />`;
+
             nameEl.textContent = item.name;
             actionEl.textContent = item.actionText;
             if (item.is_real) {
@@ -1077,6 +1365,25 @@ JS;
             $social['links'] = $stmt->fetchAll();
         }
 
+        // Fetch active review configuration
+        $stmt = $pdo->prepare("SELECT * FROM reviews WHERE widget_id = ? AND active = 1");
+        $stmt->execute([$widget_id]);
+        $reviews_config = $stmt->fetch(); // Only one config per widget
+
+        $review_items = [];
+        if ($reviews_config) {
+             // Fetch manual reviews for toaster if enabled
+             if ($reviews_config['show_reviews_widget']) {
+                 $stmt = $pdo->prepare("SELECT * FROM review_items WHERE review_id = ? AND active = 1 ORDER BY created_at DESC LIMIT 20");
+                 $stmt->execute([$reviews_config['id']]);
+                 $review_items = $stmt->fetchAll();
+                 // Add type='review' for the JS loop
+                 foreach ($review_items as &$rItem) {
+                     $rItem['type'] = 'review';
+                 }
+             }
+        }
+
         // 1. Live Visitors (Active in last 30 minutes, distinct)
         $stmt = $pdo->prepare("SELECT COUNT(DISTINCT visitor_id) as count FROM live_visitors WHERE widget_id = ? AND last_seen > (NOW() - INTERVAL 30 MINUTE)");
         $stmt->execute([$widget_id]);
@@ -1124,6 +1431,11 @@ JS;
 
         $live_config = json_decode($widget['live_visitor_config'] ?? '{}', true);
 
+        // Merge review items into notifications if they are for the toaster
+        if (!empty($review_items)) {
+            $notifications = array_merge($notifications, $review_items);
+        }
+
         echo json_encode([
             'config' => [
                 'magical_detection' => (bool)$widget['magical_detection'],
@@ -1135,6 +1447,7 @@ JS;
             'videos' => $videos,
             'newsletters' => $newsletters,
             'socials' => $socials,
+            'review_config' => $reviews_config,
             'live_count' => $live_count,
             'historical_count' => $historical_count,
             'notifications' => $notifications
@@ -1261,6 +1574,41 @@ JS;
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("INSERT INTO social_analytics (social_id, link_id, event_type, created_at) VALUES (?, ?, ?, NOW())");
         $stmt->execute([$social_id, $link_id, $type]);
+    }
+
+    public function trackReview() {
+        $this->addCors();
+        $widget_id = $_POST['w'] ?? 0;
+        $review_id = $_POST['rid'] ?? 0;
+        $type = $_POST['type'] ?? 'unknown';
+
+        if (!$widget_id || !$review_id) return;
+
+        $pdo = Database::getInstance();
+        $stmt = $pdo->prepare("INSERT INTO review_analytics (review_id, event_type, created_at) VALUES (?, ?, NOW())");
+        $stmt->execute([$review_id, $type]);
+    }
+
+    public function submitReview() {
+        $this->addCors();
+        $widget_id = $_POST['w'] ?? 0;
+        $review_id = $_POST['rid'] ?? 0;
+
+        $rating = $_POST['rating'] ?? 0;
+        $name = $_POST['name'] ?? null;
+        $email = $_POST['email'] ?? null;
+        $feedback = $_POST['feedback'] ?? null;
+
+        if (!$widget_id || !$review_id) {
+             echo json_encode(['error' => 'Missing required fields']);
+             return;
+        }
+
+        $pdo = Database::getInstance();
+        $stmt = $pdo->prepare("INSERT INTO review_feedbacks (review_id, widget_id, rating, name, email, feedback, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$review_id, $widget_id, $rating, $name, $email, $feedback]);
+
+        echo json_encode(['success' => true]);
     }
 
     public function submitNewsletter() {

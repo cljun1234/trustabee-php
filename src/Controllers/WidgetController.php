@@ -760,28 +760,94 @@ class WidgetController {
         });
     }
 
+    function showReviewPlatformChoice(googleUrl, fbUrl, config, container, modal) {
+        container.innerHTML = '';
+
+        // Close Button
+        const closeBtn = document.createElement('div');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.cssText = `
+            position: absolute; top: 10px; right: 15px;
+            font-size: 24px; cursor: pointer; opacity: 0.6;
+            z-index: 10;
+        `;
+        closeBtn.onclick = () => {
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 300);
+        };
+        container.appendChild(closeBtn);
+
+        const title = document.createElement('h3');
+        title.textContent = 'Thank you! Where would you like to leave a review?';
+        title.style.marginBottom = '20px';
+        container.appendChild(title);
+
+        const btnContainer = document.createElement('div');
+        btnContainer.style.display = 'flex';
+        btnContainer.style.flexDirection = 'column';
+        btnContainer.style.gap = '10px';
+        btnContainer.style.padding = '0 20px';
+
+        // Google Button
+        const gBtn = document.createElement('button');
+        gBtn.textContent = 'Review on Google';
+        gBtn.style.cssText = `
+            background: #DB4437; color: white; border: none;
+            padding: 12px; font-size: 16px; border-radius: 6px;
+            cursor: pointer; font-weight: 600; width: 100%;
+        `;
+        gBtn.onclick = () => {
+             window.open(googleUrl, '_blank');
+             triggerPostAction();
+        };
+        btnContainer.appendChild(gBtn);
+
+        // Facebook Button
+        const fbBtn = document.createElement('button');
+        fbBtn.textContent = 'Review on Facebook';
+        fbBtn.style.cssText = `
+            background: #1877F2; color: white; border: none;
+            padding: 12px; font-size: 16px; border-radius: 6px;
+            cursor: pointer; font-weight: 600; width: 100%;
+        `;
+        fbBtn.onclick = () => {
+             window.open(fbUrl, '_blank');
+             triggerPostAction();
+        };
+        btnContainer.appendChild(fbBtn);
+
+        container.appendChild(btnContainer);
+
+        function triggerPostAction() {
+             container.innerHTML = '<div style="padding:40px;">Processing...</div>';
+             setTimeout(() => {
+                 handlePostAction(config, 'high', container, modal);
+             }, 2000);
+        }
+    }
+
     function handleRating(rating, config, container, modal) {
         trackReviewEvent(config.id, 'click_star_' + rating);
 
         if (rating >= 4) {
              // HIGH RATING Logic
+             const google = config.google_review_link;
+             const facebook = config.facebook_review_link;
 
-             // Open Link if exists
-             // Prioritize Google, then Facebook (or user choice? config has both)
-             // Logic: If both, maybe show buttons? Or just open one?
-             // Requirement says: "if click will new tab them to the review link in Facebook/Google"
-             // Let's assume Google first if avail, else FB.
-             let url = config.google_review_link || config.facebook_review_link;
-             if (url) {
-                 window.open(url, '_blank');
+             if (google && google.trim() !== '' && facebook && facebook.trim() !== '') {
+                 showReviewPlatformChoice(google, facebook, config, container, modal);
+             } else {
+                 let url = google || facebook;
+                 if (url) {
+                     window.open(url, '_blank');
+                 }
+
+                 // Wait 3 seconds then show Post Action
+                 container.innerHTML = '<div style="padding:40px;">Processing...</div>';
+                 setTimeout(() => {
+                     handlePostAction(config, 'high', container, modal);
+                 }, 3000);
              }
-
-             // Wait 3 seconds then show Post Action
-             container.innerHTML = '<div style="padding:40px;">Processing...</div>';
-             setTimeout(() => {
-                 handlePostAction(config, 'high', container, modal);
-             }, 3000);
-
         } else {
             // LOW RATING Logic (Form)
             showFeedbackForm(config, container, modal, rating);

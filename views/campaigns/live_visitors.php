@@ -1,5 +1,7 @@
 <?php
 $pageTitle = 'Live Visitors';
+$activePage = 'campaigns';
+$activeSubPage = 'live-visitors';
 require_once __DIR__ . '/../layouts/header.php';
 
 $settings = $config['settings'] ?? [];

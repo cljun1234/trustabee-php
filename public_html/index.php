@@ -19,6 +19,8 @@ $router = new AltoRouter();
 $router->map('GET', '/login', 'AuthController#showLogin', 'login');
 $router->map('POST', '/login', 'AuthController#processLogin', 'login_post');
 $router->map('GET', '/logout', 'AuthController#logout', 'logout');
+$router->map('GET', '/register', 'AuthController#showRegister', 'register');
+$router->map('POST', '/register', 'AuthController#processRegister', 'register_post');
 
 // Dashboard
 $router->map('GET', '/', 'DashboardController#index', 'dashboard');

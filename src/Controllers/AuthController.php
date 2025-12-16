@@ -14,36 +14,62 @@ class AuthController {
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
-        // Simple password check (In production use password_verify)
-        // For this demo, if no users exist, we might create one or allow login if password matches 'admin'
-
-        if (!$user) {
-            // Auto-create user for demo if table is empty?
-            // Better: just fail. But to make testing easier:
-            // If email is admin@trustabee.com and password is 'password', let them in and create the user.
-            if ($email === 'admin@trustabee.com' && $password === 'password') {
-                $stmt = $pdo->prepare("INSERT INTO users (email, password) VALUES (?, ?)");
-                $stmt->execute([$email, password_hash($password, PASSWORD_DEFAULT)]);
-                $user_id = $pdo->lastInsertId();
-                $_SESSION['user_id'] = $user_id;
-
-                // Create default widget for user
-                $stmt = $pdo->prepare("INSERT INTO widgets (user_id, domain, name) VALUES (?, ?, ?)");
-                $stmt->execute([$user_id, 'example.com', 'My First Widget']);
-
-                header('Location: /');
-                exit;
-            }
-
+        if ($user && password_verify($password, $user['password'])) {
+            $_SESSION['user_id'] = $user['id'];
+            header('Location: /');
+            exit;
+        } else {
+            // Pass error to view or just echo
             echo "Invalid credentials";
+        }
+    }
+
+    public function showRegister() {
+        require_once __DIR__ . '/../../views/register.php';
+    }
+
+    public function processRegister() {
+        $email = $_POST['email'] ?? '';
+        $password = $_POST['password'] ?? '';
+
+        if (empty($email) || empty($password)) {
+            $error = "Email and Password are required.";
+            require_once __DIR__ . '/../../views/register.php';
             return;
         }
 
-        if (password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['id'];
+        $pdo = Database::getInstance();
+
+        // Check if user exists
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        if ($stmt->fetch()) {
+            $error = "Email already registered.";
+            require_once __DIR__ . '/../../views/register.php';
+            return;
+        }
+
+        // Create user
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("INSERT INTO users (email, password) VALUES (?, ?)");
+
+        try {
+            $stmt->execute([$email, $hashedPassword]);
+            $user_id = $pdo->lastInsertId();
+
+            // Create default widget
+            $stmtWidget = $pdo->prepare("INSERT INTO widgets (user_id, domain, name) VALUES (?, ?, ?)");
+            $stmtWidget->execute([$user_id, 'example.com', 'My First Widget']);
+
+            // Auto login
+            $_SESSION['user_id'] = $user_id;
             header('Location: /');
-        } else {
-            echo "Invalid credentials";
+            exit;
+
+        } catch (PDOException $e) {
+            $error = "Registration failed. Please try again.";
+            // error_log($e->getMessage()); // Log error in production
+            require_once __DIR__ . '/../../views/register.php';
         }
     }
 

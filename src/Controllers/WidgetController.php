@@ -609,11 +609,18 @@ class WidgetController {
     function checkReviews() {
         if (!reviewConfig) return;
 
-        // Use standard trigger logic
-        // We pass reviewConfig as the item, but need to adapt properties if names differ
-        // reviewConfig has trigger_type, trigger_delay, frequency, match_url, id
-        if (shouldShowItem(reviewConfig, 'review_popup')) {
-             setupTrigger(reviewConfig, showReviewPopup);
+        // Adapt properties for generic handler
+        // Ensure numeric types for delay and verify structure
+        const item = {
+            ...reviewConfig,
+            trigger_delay: parseInt(reviewConfig.trigger_delay || 0),
+            trigger_type: reviewConfig.trigger_type || 'delay',
+            frequency: reviewConfig.frequency || 'every_load',
+            match_url: reviewConfig.match_url || ''
+        };
+
+        if (shouldShowItem(item, 'review_popup')) {
+             setupTrigger(item, showReviewPopup);
         }
     }
 

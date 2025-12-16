@@ -269,6 +269,21 @@ class WidgetController {
         return true;
     }
 
+    // --- Collision Detection ---
+    function isAnyModalOpen() {
+        const ids = [
+            COUPON_CONTAINER_ID,
+            ANNOUNCEMENT_CONTAINER_ID,
+            VIDEO_CONTAINER_ID,
+            NEWSLETTER_CONTAINER_ID,
+            REVIEW_CONTAINER_ID
+        ];
+        for (const id of ids) {
+            if (document.getElementById(id)) return true;
+        }
+        return false;
+    }
+
     // --- Coupon Logic ---
 
     function checkCoupons() {
@@ -286,6 +301,11 @@ class WidgetController {
         localStorage.setItem(storageKey, new Date().getTime());
 
         if (document.getElementById(COUPON_CONTAINER_ID)) return;
+
+        if (isAnyModalOpen()) {
+            setTimeout(() => showCoupon(coupon), 1000);
+            return;
+        }
 
         createModal(COUPON_CONTAINER_ID, coupon, (content) => {
             // Coupon Code Box
@@ -326,9 +346,6 @@ class WidgetController {
 
     function checkAnnouncements() {
         for (const announcement of announcements) {
-             // Avoid showing if coupon is already showing?
-             // For now assume they can stack or overlap, but typically one modal at a time is best.
-             // We'll let them overlap if configured so.
             if (shouldShowItem(announcement, 'announcement')) {
                 setupTrigger(announcement, showAnnouncement);
                 return;
@@ -341,6 +358,11 @@ class WidgetController {
         localStorage.setItem(storageKey, new Date().getTime());
 
         if (document.getElementById(ANNOUNCEMENT_CONTAINER_ID)) return;
+
+        if (isAnyModalOpen()) {
+            setTimeout(() => showAnnouncement(announcement), 1000);
+            return;
+        }
 
         createModal(ANNOUNCEMENT_CONTAINER_ID, announcement, (content) => {
             // Button
@@ -444,6 +466,11 @@ class WidgetController {
 
         if (document.getElementById(VIDEO_CONTAINER_ID)) return;
 
+        if (isAnyModalOpen()) {
+            setTimeout(() => showVideo(video), 1000);
+            return;
+        }
+
         createModal(VIDEO_CONTAINER_ID, video, (content) => {
             // Video Embed
             if (video.video_url) {
@@ -499,6 +526,11 @@ class WidgetController {
         localStorage.setItem(storageKey, new Date().getTime());
 
         if (document.getElementById(NEWSLETTER_CONTAINER_ID)) return;
+
+        if (isAnyModalOpen()) {
+            setTimeout(() => showNewsletter(newsletter), 1000);
+            return;
+        }
 
         // Track View
         const payload = new URLSearchParams();
@@ -629,6 +661,11 @@ class WidgetController {
         localStorage.setItem(storageKey, new Date().getTime());
 
         if (document.getElementById(REVIEW_CONTAINER_ID)) return;
+
+        if (isAnyModalOpen()) {
+            setTimeout(() => showReviewPopup(config), 1000);
+            return;
+        }
 
         trackReviewEvent(config.id, 'view_popup');
 

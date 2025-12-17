@@ -51,51 +51,43 @@ $router->map('POST', '/admin/users/plan', 'AdminController#updateUserPlan', 'adm
 $router->map('POST', '/admin/users/role', 'AdminController#toggleUserRole', 'admin_users_role');
 
 
-// Live Visitors
-$router->map('GET', '/campaigns/live-visitors', 'LiveVisitorController#index', 'live_visitors');
+// Live Visitors (Index handled by DashboardController for locking)
 $router->map('POST', '/save-live-visitor-config', 'LiveVisitorController#saveConfig', 'save_live_visitor');
 
-// Live Conversions
-$router->map('GET', '/campaigns/live-conversion', 'LiveConversionController#index', 'live_conversion');
+// Live Conversions (Index handled by DashboardController for locking)
 $router->map('POST', '/notification/add', 'LiveConversionController#addNotification', 'add_notification');
 $router->map('GET', '/notification/delete/[i:id]', 'LiveConversionController#deleteNotification', 'delete_notification');
 $router->map('GET', '/event/delete/[i:id]', 'LiveConversionController#deleteEvent', 'delete_event');
 
 
-// Coupons
-$router->map('GET', '/campaigns/coupon', 'CouponController#index', 'coupon');
+// Coupons (Index handled by DashboardController for locking)
 $router->map('POST', '/campaigns/coupon/save', 'CouponController#save', 'coupon_save');
 $router->map('GET', '/campaigns/coupon/delete/[i:id]', 'CouponController#delete', 'coupon_delete');
 
-// Announcements
-$router->map('GET', '/campaigns/announcement', 'AnnouncementController#index', 'announcement');
+// Announcements (Index handled by DashboardController for locking)
 $router->map('POST', '/campaigns/announcement/save', 'AnnouncementController#save', 'announcement_save');
 $router->map('GET', '/campaigns/announcement/delete/[i:id]', 'AnnouncementController#delete', 'announcement_delete');
 
-// Videos
-$router->map('GET', '/campaigns/video', 'VideoController#index', 'video');
+// Videos (Index handled by DashboardController for locking)
 $router->map('POST', '/campaigns/video/save', 'VideoController#save', 'video_save');
 $router->map('GET', '/campaigns/video/delete/[i:id]', 'VideoController#delete', 'video_delete');
 
-// Newsletters
-$router->map('GET', '/campaigns/newsletter', 'NewsletterController#index', 'newsletter');
+// Newsletters (Index handled by DashboardController for locking)
 $router->map('POST', '/campaigns/newsletter/save', 'NewsletterController#save', 'newsletter_save');
 $router->map('GET', '/campaigns/newsletter/delete/[i:id]', 'NewsletterController#delete', 'newsletter_delete');
 $router->map('GET', '/campaigns/newsletter/leads/[i:id]', 'NewsletterController#leads', 'newsletter_leads');
 $router->map('GET', '/campaigns/newsletter/export/[i:id]', 'NewsletterController#export_leads', 'newsletter_export');
 
-// Social
-$router->map('GET', '/campaigns/social', 'SocialController#index', 'social');
+// Social (Index handled by DashboardController for locking)
 $router->map('POST', '/api/social/save', 'SocialController#save', 'social_save');
 $router->map('POST', '/api/social/toggle', 'SocialController#toggle', 'social_toggle');
 
-// Reviews
-$router->map('GET', '/campaigns/reviews', 'ReviewController#index', 'reviews');
+// Reviews (Index handled by DashboardController for locking)
 $router->map('POST', '/campaigns/review/save', 'ReviewController#save', 'review_save');
 $router->map('POST', '/campaigns/review/item/save', 'ReviewController#saveItem', 'review_item_save');
 $router->map('GET', '/campaigns/review/item/delete/[i:id]', 'ReviewController#deleteItem', 'review_item_delete');
 
-// Fallback for other campaigns (e.g. Coming Soon)
+// Campaigns Router & Fallback (Handles GET /campaigns/* with Locking)
 $router->map('GET', '/campaigns/[*:type]', 'DashboardController#campaigns', 'campaigns');
 
 // API / Widget

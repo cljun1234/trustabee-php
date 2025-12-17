@@ -3,8 +3,30 @@ CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'user', -- 'user', 'owner'
+    plan_id INT DEFAULT 1,
+    subscription_start DATE DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Plans Table
+CREATE TABLE IF NOT EXISTS plans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    monthly_price DECIMAL(10, 2) DEFAULT 0.00,
+    visit_limit INT DEFAULT 1000, -- -1 for unlimited
+    domain_limit INT DEFAULT 1, -- -1 for unlimited
+    features TEXT, -- JSON: { "remove_branding": false, "coupons": true, ... }
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed Plans
+INSERT INTO plans (name, monthly_price, visit_limit, domain_limit, features) VALUES
+('Free', 0.00, 1000, 1, '{"remove_branding": false, "coupons": true, "notifications": true, "videos": false}'),
+('Basic', 9.00, 10000, 3, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true}'),
+('Pro', 29.00, 50000, 10, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true}'),
+('Unlimited', 99.00, -1, -1, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true}');
+
 
 -- Widgets (Configuration for a domain)
 CREATE TABLE IF NOT EXISTS widgets (
@@ -13,8 +35,38 @@ CREATE TABLE IF NOT EXISTS widgets (
     domain VARCHAR(255) NOT NULL,
     name VARCHAR(255),
     magical_detection BOOLEAN DEFAULT 1,
+    live_visitor_enabled BOOLEAN DEFAULT 0,
+    live_visitor_config TEXT DEFAULT NULL,
+    live_conversion_enabled BOOLEAN DEFAULT 0,
+    use_real_conversion BOOLEAN DEFAULT 1,
+    use_simulated_conversion BOOLEAN DEFAULT 1,
+    timezone VARCHAR(50) DEFAULT 'UTC',
+    allowed_domains TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Usage Tracking
+CREATE TABLE IF NOT EXISTS widget_usage (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    widget_id INT NOT NULL,
+    month_year VARCHAR(7) NOT NULL, -- 'YYYY-MM'
+    muv_count INT DEFAULT 0,
+    session_count INT DEFAULT 0,
+    impression_count INT DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY (widget_id, month_year),
+    FOREIGN KEY (widget_id) REFERENCES widgets(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS visitor_monthly_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    widget_id INT NOT NULL,
+    visitor_id VARCHAR(255) NOT NULL,
+    month_year VARCHAR(7) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY (widget_id, visitor_id, month_year),
+    FOREIGN KEY (widget_id) REFERENCES widgets(id) ON DELETE CASCADE
 );
 
 -- Notifications (Simulated data)
@@ -60,17 +112,6 @@ CREATE TABLE IF NOT EXISTS traffic_snapshots (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (widget_id) REFERENCES widgets(id) ON DELETE CASCADE
 );
-
--- Add Live Visitor Configuration to widgets
-ALTER TABLE widgets ADD COLUMN live_visitor_enabled BOOLEAN DEFAULT 0;
-ALTER TABLE widgets ADD COLUMN live_visitor_config TEXT DEFAULT NULL; -- JSON string for styles
-
--- Live Conversion Settings
-ALTER TABLE widgets ADD COLUMN live_conversion_enabled BOOLEAN DEFAULT 0;
-ALTER TABLE widgets ADD COLUMN use_real_conversion BOOLEAN DEFAULT 1;
-ALTER TABLE widgets ADD COLUMN use_simulated_conversion BOOLEAN DEFAULT 1;
--- Add Timezone to widgets
-ALTER TABLE widgets ADD COLUMN timezone VARCHAR(50) DEFAULT 'UTC';
 
 -- Coupons Table
 CREATE TABLE IF NOT EXISTS coupons (

@@ -16,10 +16,12 @@ if (getenv('APP_DEBUG') === 'true') {
 require_once __DIR__ . '/../src/AltoRouter.php';
 require_once __DIR__ . '/../config/database.php';
 
-// Autoload Controllers
+// Autoload Controllers & Helpers
 spl_autoload_register(function ($class) {
     if (strpos($class, 'Controller') !== false) {
         require_once __DIR__ . '/../src/Controllers/' . $class . '.php';
+    } elseif ($class === 'PlanManager') {
+        require_once __DIR__ . '/../src/Helpers/PlanManager.php';
     }
 });
 
@@ -36,9 +38,17 @@ $router->map('POST', '/register', 'AuthController#processRegister', 'register_po
 
 // Dashboard
 $router->map('GET', '/', 'DashboardController#index', 'dashboard');
+$router->map('GET', '/billing', 'BillingController#index', 'billing');
 $router->map('GET', '/settings', 'DashboardController#settings', 'settings');
 $router->map('POST', '/widget/save', 'DashboardController#saveConfig', 'save_config');
 $router->map('POST', '/api/toggle-feature', 'DashboardController#toggleFeature', 'api_toggle_feature');
+
+// Admin
+$router->map('GET', '/admin/plans', 'AdminController#plans', 'admin_plans');
+$router->map('POST', '/admin/plans/save', 'AdminController#savePlan', 'admin_plans_save');
+$router->map('GET', '/admin/users', 'AdminController#users', 'admin_users');
+$router->map('POST', '/admin/users/plan', 'AdminController#updateUserPlan', 'admin_users_plan');
+$router->map('POST', '/admin/users/role', 'AdminController#toggleUserRole', 'admin_users_role');
 
 
 // Live Visitors

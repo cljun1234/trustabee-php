@@ -8,6 +8,18 @@ class WidgetController {
 
         $widget_id = (int)($_GET['w'] ?? 0);
 
+        // 1. Domain Validation
+        $origin = $_SERVER['HTTP_REFERER'] ?? $_SERVER['HTTP_ORIGIN'] ?? '';
+        // If testing locally or via direct file access, allow?
+        // For production security, we enforce it.
+        // We skip validation if $origin is empty IF we want to allow direct access, but requirement says "only that domain".
+        // However, standard browsers always send Referer for script tags.
+
+        if ($widget_id > 0 && !PlanManager::isDomainAllowed($widget_id, $origin)) {
+            echo "console.error('Trustabee: Domain not authorized for this widget (ID: $widget_id).');";
+            exit;
+        }
+
         // Construct the base URL for API calls
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
         $host = $_SERVER['HTTP_HOST'];
@@ -29,7 +41,7 @@ class WidgetController {
     const SOCIAL_CONTAINER_ID = 'trustabee-social-widget';
     const REVIEW_CONTAINER_ID = 'trustabee-review-modal';
 
-    // Social Media Icons (SVG Paths) - 24x24 ViewBox preferred
+    // Social Media Icons (SVG Paths)
     const SOCIAL_ICONS = {
         'facebook': 'M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z',
         'twitter': 'M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z',
@@ -60,9 +72,20 @@ class WidgetController {
     // --- API Calls ---
 
     async function fetchData() {
+        let visitorId = localStorage.getItem('trustabee_vid');
+        if (!visitorId) {
+            visitorId = 'v_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('trustabee_vid', visitorId);
+        }
+
         try {
-            const response = await fetch(`\${API_BASE}/data?w=\${WIDGET_ID}`);
+            const response = await fetch(`\${API_BASE}/data?w=\${WIDGET_ID}&vid=\${visitorId}`);
             const json = await response.json();
+
+            if (json.error) {
+                console.error('Trustabee:', json.error);
+                return;
+            }
 
             // Store coupons
             if (json.coupons && json.coupons.length > 0) {
@@ -462,9 +485,9 @@ class WidgetController {
             // Hosted video
             const videoEl = document.createElement('video');
             videoEl.src = url;
-            videoEl.width = "100%"; // Note: width is attribute here, or style
+            videoEl.width = "100%";
             videoEl.style.width = "100%";
-            videoEl.height = 220; // attribute
+            videoEl.height = 220;
             videoEl.autoplay = true;
             videoEl.muted = true;
             videoEl.controls = true;
@@ -659,7 +682,6 @@ class WidgetController {
         if (!reviewConfig) return;
 
         // Adapt properties for generic handler
-        // Ensure numeric types for delay and verify structure
         const item = {
             ...reviewConfig,
             trigger_delay: parseInt(reviewConfig.trigger_delay || 0),
@@ -980,14 +1002,6 @@ class WidgetController {
     }
 
     function showSocial(social) {
-        // We do NOT store "shown" timestamp in localStorage for frequency 'session'
-        // because the requirement says "Close it for the session only".
-        // This implies it shows on every page load unless closed in that session.
-        // But if frequency is 'every_load', it shows every time.
-        // Wait, standard triggers logic (shouldShowItem) handles frequency 'session' as "once every 30 mins".
-        // The user requirement "close it for the session only" is a "Hide" logic, not a "Show" logic.
-        // So we need to respect the explicit "close" action.
-
         if (sessionStorage.getItem(`trustabee_social_closed_\${social.id}`)) {
             return;
         }
@@ -1111,7 +1125,6 @@ class WidgetController {
                 svg.style.height = '16px';
                 svg.style.fill = 'white';
 
-                // SnapChat logo is usually black on yellow
                 if (link.platform === 'snapchat') {
                     svg.style.fill = 'black';
                 }
@@ -1121,7 +1134,6 @@ class WidgetController {
                 svg.appendChild(path);
                 iconBox.appendChild(svg);
             } else {
-                // Fallback: First letter
                 iconBox.textContent = link.platform.charAt(0).toUpperCase();
             }
 
@@ -1150,7 +1162,6 @@ class WidgetController {
 
         document.body.appendChild(container);
 
-        // Animate In
         requestAnimationFrame(() => {
             container.style.opacity = '1';
             container.style.transform = 'translateY(0)';
@@ -1196,7 +1207,6 @@ class WidgetController {
 
         // --- Image Layout Logic ---
         let contentContainer = content;
-        let rightPane = null; // Used for split views
 
         if (item.image_url) {
             const imgUrl = API_BASE.replace('/api', '') + item.image_url;
@@ -1212,11 +1222,10 @@ class WidgetController {
                 img.style.cssText = 'width: 100%; height: 150px; object-fit: cover; border-radius: 8px 8px 0 0; margin-bottom: 20px; display: block; margin-left: -30px; margin-top: -30px; width: calc(100% + 60px);';
                 content.appendChild(img);
             } else if (style === 'left' || style === 'right') {
-                // Adjust Content Layout to Row
                 content.style.display = 'flex';
                 content.style.flexDirection = style === 'left' ? 'row' : 'row-reverse';
                 content.style.maxWidth = '700px';
-                content.style.padding = '0'; // Remove padding from main container
+                content.style.padding = '0';
                 content.style.overflow = 'hidden';
 
                 const imgPane = document.createElement('div');
@@ -1229,11 +1238,6 @@ class WidgetController {
                 const textPane = document.createElement('div');
                 textPane.style.cssText = 'flex: 1; padding: 30px; display: flex; flex-direction: column; justify-content: center; position: relative;';
 
-                // We must append closeBtn to textPane to ensure it is visible on the white part
-                // Or keep it absolute on 'content'. If 'content' has no padding/relative, absolute works.
-                // But if image is on right (row-reverse), right: 15px puts X on image.
-                // If image is on left, right: 15px puts X on text.
-                // Let's move close button into text pane for better visibility/contrast.
                 closeBtn.style.right = '15px';
                 closeBtn.style.top = '10px';
                 textPane.appendChild(closeBtn);
@@ -1241,7 +1245,7 @@ class WidgetController {
                 content.appendChild(imgPane);
                 content.appendChild(textPane);
 
-                contentContainer = textPane; // All subsequent text/buttons go here
+                contentContainer = textPane;
             }
         }
 
@@ -1274,7 +1278,6 @@ class WidgetController {
         modal.appendChild(content);
         document.body.appendChild(modal);
 
-        // Animate in
         requestAnimationFrame(() => {
             modal.style.opacity = '1';
             content.style.transform = 'scale(1)';
@@ -1313,7 +1316,6 @@ class WidgetController {
         const actionEl = widgetElement.querySelector('.action-text');
         const verifyEl = widgetElement.querySelector('.verification');
 
-        // Reset defaults
         verifyEl.style.display = 'none';
         mapEl.style.display = 'block';
 
@@ -1326,25 +1328,20 @@ class WidgetController {
             nameEl.textContent = 'Popular';
             actionEl.textContent = item.text;
         } else if (item.type === 'review') {
-            // Review Item in Toaster
             mapEl.style.display = 'block';
 
-            // Image
             if (item.image_url) {
                 mapEl.innerHTML = `<img src="\${item.image_url}" alt="user" />`;
             } else {
-                // Fallback: First letter
                 const letter = item.name.charAt(0).toUpperCase();
                 mapEl.innerHTML = `<div style="width:100%;height:100%;background:#1a73e8;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:24px;">\${letter}</div>`;
             }
 
-            // Stars
             let stars = '';
             for(let i=0; i<item.rating; i++) stars += '&#9733;';
 
             nameEl.innerHTML = `\${item.name} <span style="color:#fbbf24">\${stars}</span>`;
 
-            // Text + Link
             let text = item.review_text.substring(0, 50);
             if(item.review_text.length > 50) text += '...';
 
@@ -1357,8 +1354,6 @@ class WidgetController {
             actionEl.innerHTML = `"\${text}"\${sourceHtml}`;
 
         } else {
-            // Normal notification
-            // Reset map
             mapEl.innerHTML = `<img src="https://provely-public.s3.amazonaws.com/images/maps/default.jpg" alt="map" />`;
 
             nameEl.textContent = item.name;
@@ -1463,6 +1458,20 @@ JS;
         header('Content-Type: application/json');
 
         $widget_id = $_GET['w'] ?? 0;
+
+        // 1. Domain Validation
+        $origin = $_SERVER['HTTP_REFERER'] ?? $_SERVER['HTTP_ORIGIN'] ?? '';
+        if ($widget_id > 0 && !PlanManager::isDomainAllowed($widget_id, $origin)) {
+             echo json_encode(['error' => 'Domain not authorized']);
+             exit;
+        }
+
+        // 2. Track Usage (Session & MUV)
+        $vid = $_GET['vid'] ?? 'unknown';
+        if ($widget_id > 0) {
+            $this->trackUsage($widget_id, $vid);
+        }
+
         $pdo = Database::getInstance();
 
         $stmt = $pdo->prepare("SELECT * FROM widgets WHERE id = ?");
@@ -1477,30 +1486,39 @@ JS;
         // Lazy Logging: Check if we need to take a snapshot
         $this->logTrafficSnapshot($widget_id, $pdo);
 
+        // Enforce Plan Limits (Branding)
+        $plan = PlanManager::getUserPlan($widget['user_id']);
+        $canRemoveBranding = !empty($plan['features']['remove_branding']);
+
         // Fetch active coupons
         $stmt = $pdo->prepare("SELECT * FROM coupons WHERE widget_id = ? AND active = 1");
         $stmt->execute([$widget_id]);
         $coupons = $stmt->fetchAll();
+        if (!$canRemoveBranding) { foreach ($coupons as &$x) $x['remove_branding'] = 0; }
 
         // Fetch active announcements
         $stmt = $pdo->prepare("SELECT * FROM announcements WHERE widget_id = ? AND active = 1");
         $stmt->execute([$widget_id]);
         $announcements = $stmt->fetchAll();
+        if (!$canRemoveBranding) { foreach ($announcements as &$x) $x['remove_branding'] = 0; }
 
         // Fetch active videos
         $stmt = $pdo->prepare("SELECT * FROM videos WHERE widget_id = ? AND active = 1");
         $stmt->execute([$widget_id]);
         $videos = $stmt->fetchAll();
+        if (!$canRemoveBranding) { foreach ($videos as &$x) $x['remove_branding'] = 0; }
 
         // Fetch active newsletters
         $stmt = $pdo->prepare("SELECT * FROM newsletters WHERE widget_id = ? AND active = 1");
         $stmt->execute([$widget_id]);
         $newsletters = $stmt->fetchAll();
+        if (!$canRemoveBranding) { foreach ($newsletters as &$x) $x['remove_branding'] = 0; }
 
         // Fetch active social widgets
         $stmt = $pdo->prepare("SELECT * FROM socials WHERE widget_id = ? AND active = 1");
         $stmt->execute([$widget_id]);
         $socials = $stmt->fetchAll();
+        if (!$canRemoveBranding) { foreach ($socials as &$x) $x['remove_branding'] = 0; }
 
         // Attach links to socials
         foreach ($socials as &$social) {
@@ -1512,35 +1530,33 @@ JS;
         // Fetch active review configuration
         $stmt = $pdo->prepare("SELECT * FROM reviews WHERE widget_id = ? AND active = 1");
         $stmt->execute([$widget_id]);
-        $reviews_config = $stmt->fetch(); // Only one config per widget
+        $reviews_config = $stmt->fetch();
+        if ($reviews_config && !$canRemoveBranding) $reviews_config['remove_branding'] = 0;
 
         $review_items = [];
         if ($reviews_config) {
-             // Fetch manual reviews for toaster if enabled
              if ($reviews_config['show_reviews_widget']) {
                  $stmt = $pdo->prepare("SELECT * FROM review_items WHERE review_id = ? AND active = 1 ORDER BY created_at DESC LIMIT 20");
                  $stmt->execute([$reviews_config['id']]);
                  $review_items = $stmt->fetchAll();
-                 // Add type='review' for the JS loop
                  foreach ($review_items as &$rItem) {
                      $rItem['type'] = 'review';
                  }
              }
         }
 
-        // 1. Live Visitors (Active in last 30 minutes, distinct)
+        // 1. Live Visitors
         $stmt = $pdo->prepare("SELECT COUNT(DISTINCT visitor_id) as count FROM live_visitors WHERE widget_id = ? AND last_seen > (NOW() - INTERVAL 30 MINUTE)");
         $stmt->execute([$widget_id]);
         $live_count = $stmt->fetch()['count'];
 
-        // 2. Historical (Last 7 days events)
+        // 2. Historical
         $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM events WHERE widget_id = ? AND created_at > (NOW() - INTERVAL 7 DAY)");
         $stmt->execute([$widget_id]);
         $historical_count = $stmt->fetch()['count'];
 
         $notifications = [];
 
-        // Check if Live Conversion is enabled
         $live_conversion_enabled = (bool)($widget['live_conversion_enabled'] ?? false);
         $use_real = (bool)($widget['use_real_conversion'] ?? true);
         $use_simulated = (bool)($widget['use_simulated_conversion'] ?? true);
@@ -1575,7 +1591,6 @@ JS;
 
         $live_config = json_decode($widget['live_visitor_config'] ?? '{}', true);
 
-        // Merge review items into notifications if they are for the toaster
         if (!empty($review_items)) {
             $notifications = array_merge($notifications, $review_items);
         }
@@ -1598,15 +1613,55 @@ JS;
         ]);
     }
 
+    private function trackUsage($widget_id, $visitor_id) {
+        $pdo = Database::getInstance();
+        $monthYear = date('Y-m');
+
+        try {
+            // Upsert session count
+            // MySQL syntax
+            $stmt = $pdo->prepare("INSERT INTO widget_usage (widget_id, month_year, session_count) VALUES (?, ?, 1)
+                                   ON DUPLICATE KEY UPDATE session_count = session_count + 1");
+            $stmt->execute([$widget_id, $monthYear]);
+
+            // MUV
+            if ($visitor_id && $visitor_id !== 'unknown') {
+                $stmt = $pdo->prepare("SELECT id FROM visitor_monthly_logs WHERE widget_id = ? AND visitor_id = ? AND month_year = ?");
+                $stmt->execute([$widget_id, $visitor_id, $monthYear]);
+                if (!$stmt->fetch()) {
+                    // New visitor this month
+                    $stmt = $pdo->prepare("INSERT INTO visitor_monthly_logs (widget_id, visitor_id, month_year) VALUES (?, ?, ?)");
+                    $stmt->execute([$widget_id, $visitor_id, $monthYear]);
+
+                    // Increment MUV
+                    $stmt = $pdo->prepare("UPDATE widget_usage SET muv_count = muv_count + 1 WHERE widget_id = ? AND month_year = ?");
+                    $stmt->execute([$widget_id, $monthYear]);
+                }
+            }
+        } catch (PDOException $e) {
+            // Ignore error to not break the widget if stats fail
+            error_log("Usage tracking failed: " . $e->getMessage());
+        }
+    }
+
+    private function incrementImpression($widget_id) {
+        $pdo = Database::getInstance();
+        $monthYear = date('Y-m');
+        try {
+            $stmt = $pdo->prepare("INSERT INTO widget_usage (widget_id, month_year, impression_count) VALUES (?, ?, 1)
+                                   ON DUPLICATE KEY UPDATE impression_count = impression_count + 1");
+            $stmt->execute([$widget_id, $monthYear]);
+        } catch (PDOException $e) {
+            error_log("Impression tracking failed: " . $e->getMessage());
+        }
+    }
+
     private function logTrafficSnapshot($widget_id, $pdo) {
-        // Check for any snapshot in the last 5 minutes (to avoid race conditions/duplicates)
         $stmt = $pdo->prepare("SELECT id FROM traffic_snapshots WHERE widget_id = ? AND created_at > (NOW() - INTERVAL 5 MINUTE) LIMIT 1");
         $stmt->execute([$widget_id]);
         $recent_exists = $stmt->fetchColumn();
 
         if (!$recent_exists) {
-            // Take snapshot
-            // Count distinct visitors active in last 30 mins
             $stmt = $pdo->prepare("SELECT COUNT(DISTINCT visitor_id) FROM live_visitors WHERE widget_id = ? AND last_seen > (NOW() - INTERVAL 30 MINUTE)");
             $stmt->execute([$widget_id]);
             $count = $stmt->fetchColumn();
@@ -1652,6 +1707,8 @@ JS;
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("INSERT INTO events (widget_id, type, payload, visitor_id, page_url) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$widget_id, $type, $payload, $visitor_id, $page]);
+
+        $this->incrementImpression($widget_id);
     }
 
     public function trackCoupon() {
@@ -1665,6 +1722,8 @@ JS;
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("INSERT INTO coupon_analytics (coupon_id, event_type, created_at) VALUES (?, ?, NOW())");
         $stmt->execute([$coupon_id, $type]);
+
+        if ($type === 'view') $this->incrementImpression($widget_id);
     }
 
     public function trackAnnouncement() {
@@ -1678,6 +1737,8 @@ JS;
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("INSERT INTO announcement_analytics (announcement_id, event_type, created_at) VALUES (?, ?, NOW())");
         $stmt->execute([$announcement_id, $type]);
+
+        if ($type === 'view') $this->incrementImpression($widget_id);
     }
 
     public function trackVideo() {
@@ -1691,6 +1752,8 @@ JS;
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("INSERT INTO video_analytics (video_id, event_type, created_at) VALUES (?, ?, NOW())");
         $stmt->execute([$video_id, $type]);
+
+        if ($type === 'view') $this->incrementImpression($widget_id);
     }
 
     public function trackNewsletter() {
@@ -1704,6 +1767,8 @@ JS;
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("INSERT INTO newsletter_analytics (newsletter_id, event_type, created_at) VALUES (?, ?, NOW())");
         $stmt->execute([$newsletter_id, $type]);
+
+        if ($type === 'view') $this->incrementImpression($widget_id);
     }
 
     public function trackSocial() {
@@ -1718,6 +1783,8 @@ JS;
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("INSERT INTO social_analytics (social_id, link_id, event_type, created_at) VALUES (?, ?, ?, NOW())");
         $stmt->execute([$social_id, $link_id, $type]);
+
+        if ($type === 'view') $this->incrementImpression($widget_id);
     }
 
     public function trackReview() {
@@ -1731,6 +1798,8 @@ JS;
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("INSERT INTO review_analytics (review_id, event_type, created_at) VALUES (?, ?, NOW())");
         $stmt->execute([$review_id, $type]);
+
+        if ($type === 'view_popup' || $type === 'view') $this->incrementImpression($widget_id);
     }
 
     public function submitReview() {
@@ -1794,13 +1863,12 @@ JS;
                  'created_at' => date('Y-m-d H:i:s')
              ];
 
-             // Fire and forget (or with short timeout)
              $ch = curl_init($webhook_url);
              curl_setopt($ch, CURLOPT_POST, 1);
              curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
              curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
              curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-             curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 seconds timeout
+             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
              curl_exec($ch);
              curl_close($ch);
         }

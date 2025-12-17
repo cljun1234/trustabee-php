@@ -203,10 +203,32 @@
         </li>
 
         <li class="nav-item">
+            <a href="/billing" class="nav-link <?php echo ($activePage == 'billing') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-credit-card"></i> Billing
+            </a>
+        </li>
+
+        <li class="nav-item">
             <a href="/settings" class="nav-link <?php echo ($activePage == 'settings') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-gear"></i> Settings
             </a>
         </li>
+
+        <?php if (($_SESSION['role'] ?? 'user') === 'owner'): ?>
+        <li class="nav-item" style="margin-top: 10px; border-top: 1px solid #eee;">
+            <div style="padding: 10px 24px; font-size: 0.75rem; text-transform: uppercase; color: #999; font-weight: bold;">Super Admin</div>
+        </li>
+        <li class="nav-item">
+            <a href="/admin/users" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'users') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-users-gear"></i> Manage Users
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/admin/plans" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'plans') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-clipboard-list"></i> Manage Plans
+            </a>
+        </li>
+        <?php endif; ?>
     </ul>
 
     <div style="margin-top: auto; padding: 20px;">

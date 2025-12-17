@@ -3,7 +3,24 @@ $activePage = 'campaigns';
 $activeSubPage = 'coupon';
 $pageTitle = 'Coupons';
 require_once __DIR__ . '/../layouts/header.php';
+
+// Check feature access
+$plan = PlanManager::getUserPlan($_SESSION['user_id']);
+$isAllowed = !empty($plan['features']['coupons']);
+$brandingAllowed = !empty($plan['features']['remove_branding']);
 ?>
+
+<?php if (!$isAllowed): ?>
+    <div style="text-align: center; padding: 50px; background: white; border-radius: 8px; margin-top: 20px;">
+        <i class="fa-solid fa-lock" style="font-size: 48px; color: #ccc; margin-bottom: 20px;"></i>
+        <h2>Feature Locked</h2>
+        <p>Your current plan does not include Coupons.</p>
+        <div style="margin-top: 20px;">
+            <a href="/billing" class="btn">Upgrade Plan</a>
+        </div>
+    </div>
+    <?php require_once __DIR__ . '/../layouts/footer.php'; exit; ?>
+<?php endif; ?>
 
 <style>
 /* Switch Toggle CSS */
@@ -162,9 +179,9 @@ input:checked + .slider:before { transform: translateX(24px); }
             </div>
 
             <div class="form-group">
-                <label class="toggle">
-                    <input type="checkbox" name="remove_branding" id="remove_branding">
-                    Remove Branding
+                <label class="toggle" <?php if(!$brandingAllowed) echo 'style="opacity: 0.5;" title="Upgrade required"'; ?>>
+                    <input type="checkbox" name="remove_branding" id="remove_branding" <?php if(!$brandingAllowed) echo 'disabled'; ?>>
+                    Remove Branding <?php if(!$brandingAllowed) echo ' <small>(Upgrade Required)</small>'; ?>
                 </label>
             </div>
 

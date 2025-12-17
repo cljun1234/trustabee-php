@@ -85,6 +85,7 @@ class DashboardController {
 
     public function settings() {
         list($pdo, $user_id, $widget) = $this->getWidgetAndUser();
+        $plan = PlanManager::getUserPlan($user_id); // Fetch plan for limits
         require_once __DIR__ . '/../../views/pages/settings.php';
     }
 
@@ -205,10 +206,23 @@ class DashboardController {
 
         $magical = isset($_POST['magical_detection']) ? 1 : 0;
         $timezone = $_POST['timezone'] ?? 'UTC';
+        $allowed_domains = $_POST['allowed_domains'] ?? '';
+
+        // Validate Domain Limit
+        require_once __DIR__ . '/../Helpers/PlanManager.php';
+        $plan = PlanManager::getUserPlan($user_id);
+
+        $domains = array_filter(explode(',', $allowed_domains), function($d) { return !empty(trim($d)); });
+
+        if ($plan['domain_limit'] != -1 && count($domains) > $plan['domain_limit']) {
+            // Truncate to limit
+            $domains = array_slice($domains, 0, $plan['domain_limit']);
+            $allowed_domains = implode(',', $domains);
+        }
 
         // Update first widget found
-        $stmt = $pdo->prepare("UPDATE widgets SET magical_detection = ?, timezone = ? WHERE user_id = ?");
-        $stmt->execute([$magical, $timezone, $user_id]);
+        $stmt = $pdo->prepare("UPDATE widgets SET magical_detection = ?, timezone = ?, allowed_domains = ? WHERE user_id = ?");
+        $stmt->execute([$magical, $timezone, $allowed_domains, $user_id]);
 
         header('Location: /settings');
     }

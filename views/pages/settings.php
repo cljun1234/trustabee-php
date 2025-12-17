@@ -28,6 +28,15 @@ require_once __DIR__ . '/../layouts/header.php';
         </div>
 
         <div class="form-group" style="margin-top: 20px;">
+            <label>Allowed Domains (Comma separated)</label>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 0;">
+                Limit: <?php echo ($plan['domain_limit'] == -1) ? 'Unlimited' : $plan['domain_limit']; ?> domains.
+                Only these domains are allowed to load the widget.
+            </p>
+            <input type="text" name="allowed_domains" value="<?php echo htmlspecialchars($widget['allowed_domains'] ?? ''); ?>" placeholder="example.com, blog.example.com">
+        </div>
+
+        <div class="form-group" style="margin-top: 20px;">
             <label>Timezone</label>
             <select name="timezone" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
                 <?php

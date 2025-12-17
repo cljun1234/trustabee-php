@@ -74,7 +74,8 @@ class AuthController {
 
         } catch (PDOException $e) {
             $error = "Registration failed. Please try again.";
-            error_log($e->getMessage()); // Log error in production
+            // Log error with context for production debugging
+            error_log("AuthController::processRegister Error: " . $e->getMessage());
             require_once __DIR__ . '/../../views/register.php';
         }
     }

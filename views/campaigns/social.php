@@ -147,27 +147,12 @@ input:checked + .slider:before { transform: translateX(24px); }
             <div class="card-body">
                 <div class="row">
                     <div class="col-12">
-                <?php foreach ($platforms as $platform):
+                <?php foreach ($platformsConfig as $platform => $config):
                     $link = $links_map[$platform] ?? null;
                     $isActive = $link && $link['is_active'];
                     $url = $link['url'] ?? '';
                     $label = $link['label_text'] ?? "Join us on " . ucfirst($platform);
-
-                    // Map platforms to FontAwesome icons
-                    $faIcon = 'fa-share-alt';
-                    if ($platform === 'facebook') $faIcon = 'fa-facebook-f';
-                    elseif ($platform === 'twitter') $faIcon = 'fa-twitter';
-                    elseif ($platform === 'instagram') $faIcon = 'fa-instagram';
-                    elseif ($platform === 'linkedin') $faIcon = 'fa-linkedin-in';
-                    elseif ($platform === 'youtube') $faIcon = 'fa-youtube';
-                    elseif ($platform === 'tiktok') $faIcon = 'fa-tiktok';
-                    elseif ($platform === 'pinterest') $faIcon = 'fa-pinterest-p';
-                    elseif ($platform === 'whatsapp') $faIcon = 'fa-whatsapp';
-                    elseif ($platform === 'telegram') $faIcon = 'fa-telegram';
-                    elseif ($platform === 'discord') $faIcon = 'fa-discord';
-                    elseif ($platform === 'reddit') $faIcon = 'fa-reddit-alien';
-                    elseif ($platform === 'snapchat') $faIcon = 'fa-snapchat';
-                    elseif ($platform === 'spotify') $faIcon = 'fa-spotify';
+                    $faIcon = $config['icon'];
                 ?>
                 <div class="mb-3 border rounded p-3 bg-white">
                     <!-- Row Header: Toggle | Icon | Name -->
@@ -294,6 +279,9 @@ function validateLimit(changedEl) {
     }
 }
 
+// Inject PHP config into JS
+const platformsConfig = <?php echo json_encode($platformsConfig); ?>;
+
 function updatePreview() {
     // Texts
     document.getElementById('previewTitle').textContent = document.querySelector('input[name="title"]').value;
@@ -307,14 +295,17 @@ function updatePreview() {
     const linksContainer = document.getElementById('previewLinks');
     linksContainer.innerHTML = '';
 
-    // Platforms list needs to match PHP list
-    const platforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'pinterest', 'whatsapp', 'telegram', 'discord', 'reddit', 'snapchat', 'spotify'];
-
-    platforms.forEach(p => {
+    Object.keys(platformsConfig).forEach(p => {
+        const config = platformsConfig[p];
         const toggle = document.getElementById('toggle_' + p);
         if (toggle && toggle.checked) {
-            const url = document.querySelector(`input[name="platform_\${p}_url"]`).value;
-            const label = document.querySelector(`input[name="platform_\${p}_label"]`).value || p;
+            // Note: PHP variable names are platform_${p}_url.
+            const urlInput = document.querySelector(`input[name="platform_${p}_url"]`);
+            const labelInput = document.querySelector(`input[name="platform_${p}_label"]`);
+
+            const url = urlInput ? urlInput.value : '';
+            // If label is empty, capitalize the platform name
+            const label = (labelInput && labelInput.value) ? labelInput.value : (p.charAt(0).toUpperCase() + p.slice(1));
 
             const item = document.createElement('div');
             item.style.cssText = `
@@ -323,25 +314,15 @@ function updatePreview() {
                 border-radius: 8px; color: #333; font-size: 14px; background: white;
             `;
 
-            let iconColor = '#333';
-            let iconClass = 'fa-share-alt';
-            if (p === 'facebook') { iconColor = '#1877f2'; iconClass = 'fa-facebook-f'; }
-            if (p === 'twitter') { iconColor = '#1da1f2'; iconClass = 'fa-twitter'; }
-            if (p === 'instagram') { iconColor = '#c32aa3'; iconClass = 'fa-instagram'; }
-            if (p === 'linkedin') { iconColor = '#0a66c2'; iconClass = 'fa-linkedin-in'; }
-            if (p === 'youtube') { iconColor = '#ff0000'; iconClass = 'fa-youtube'; }
-            if (p === 'whatsapp') { iconColor = '#25d366'; iconClass = 'fa-whatsapp'; }
-            if (p === 'tiktok') { iconColor = '#000000'; iconClass = 'fa-tiktok'; }
-            if (p === 'pinterest') { iconColor = '#bd081c'; iconClass = 'fa-pinterest-p'; }
-            if (p === 'telegram') { iconColor = '#0088cc'; iconClass = 'fa-telegram'; }
-            if (p === 'discord') { iconColor = '#5865F2'; iconClass = 'fa-discord'; }
-            if (p === 'reddit') { iconColor = '#FF4500'; iconClass = 'fa-reddit-alien'; }
-            if (p === 'snapchat') { iconColor = '#FFFC00'; iconClass = 'fa-snapchat'; }
-            if (p === 'spotify') { iconColor = '#1DB954'; iconClass = 'fa-spotify'; }
+            const iconColor = config.color;
+            const iconClass = config.icon;
+
+            // Special case for snapchat icon color (black on yellow)
+            const iconTextColor = (p === 'snapchat') ? 'black' : 'white';
 
             item.innerHTML = `
                 <span style="width: 24px; height: 24px; background: \${iconColor}; border-radius: 4px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                     <i class="fa-brands \${iconClass}" style="font-size: 14px; color: \${p === 'snapchat' ? 'black' : 'white'};"></i>
+                     <i class="fa-brands ${iconClass}" style="font-size: 14px; color: ${iconTextColor};"></i>
                 </span>
                 <span style="font-weight: 500;">\${label}</span>
             `;

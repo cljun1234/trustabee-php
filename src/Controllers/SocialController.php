@@ -2,6 +2,22 @@
 
 class SocialController {
 
+    private const PLATFORMS_CONFIG = [
+        'facebook'  => ['icon' => 'fa-facebook-f', 'color' => '#1877f2'],
+        'twitter'   => ['icon' => 'fa-twitter',    'color' => '#1da1f2'],
+        'instagram' => ['icon' => 'fa-instagram',  'color' => '#c32aa3'],
+        'linkedin'  => ['icon' => 'fa-linkedin-in','color' => '#0a66c2'],
+        'youtube'   => ['icon' => 'fa-youtube',    'color' => '#ff0000'],
+        'tiktok'    => ['icon' => 'fa-tiktok',     'color' => '#000000'],
+        'pinterest' => ['icon' => 'fa-pinterest-p','color' => '#bd081c'],
+        'whatsapp'  => ['icon' => 'fa-whatsapp',   'color' => '#25d366'],
+        'telegram'  => ['icon' => 'fa-telegram',   'color' => '#0088cc'],
+        'discord'   => ['icon' => 'fa-discord',    'color' => '#5865F2'],
+        'reddit'    => ['icon' => 'fa-reddit-alien','color' => '#FF4500'],
+        'snapchat'  => ['icon' => 'fa-snapchat',   'color' => '#FFFC00'],
+        'spotify'   => ['icon' => 'fa-spotify',    'color' => '#1DB954'],
+    ];
+
     private function getWidgetAndUser() {
         if (!isset($_SESSION['user_id'])) {
             header('Location: /login');
@@ -54,7 +70,10 @@ class SocialController {
         $links = $stmt->fetchAll();
 
         // Prepare links map for easy access in view
-        $platforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'pinterest', 'whatsapp', 'telegram', 'discord', 'reddit', 'snapchat', 'spotify'];
+        $platformsConfig = self::PLATFORMS_CONFIG;
+        // Keep $platforms for backward compatibility if needed by view (it loops over keys)
+        $platforms = array_keys($platformsConfig);
+
         $links_map = [];
         foreach ($links as $link) {
             $links_map[$link['platform']] = $link;
@@ -87,7 +106,7 @@ class SocialController {
         $stmt->execute([$title, $subtitle, $remove_branding, $position, $trigger_type, $trigger_delay, $frequency, $social_id]);
 
         // Save Links
-        $platforms = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'pinterest', 'whatsapp', 'telegram', 'discord', 'reddit', 'snapchat', 'spotify'];
+        $platforms = array_keys(self::PLATFORMS_CONFIG);
 
         // First reset all to inactive
         $stmt = $pdo->prepare("UPDATE social_links SET is_active = 0 WHERE social_id = ?");

@@ -20,7 +20,8 @@ class AuthController {
             exit;
         } else {
             // Pass error to view or just echo
-            echo "Invalid credentials";
+            $error = "Invalid credentials";
+            require_once __DIR__ . '/../../views/login.php';
         }
     }
 

@@ -6,13 +6,19 @@ class Database {
 
     private function __construct() {
         // In a real environment, use environment variables
-        // For this sandbox, we'll default to localhost if not set, or a sqlite file for fallback testing
+        // For this sandbox, we'll default to sqlite if environment variables are not set
 
-        $host = getenv('DB_HOST') ?: 'localhost';
-        $db   = getenv('DB_NAME') ?: 'u118256295_stg_trustabee';
-        $user = getenv('DB_USER') ?: 'u118256295_trustabee';
-        $pass = getenv('DB_PASS') ?: 'Trustabee123!';
-        $driver = getenv('DB_DRIVER') ?: 'mysql';
+        $host = getenv('DB_HOST');
+        $db   = getenv('DB_NAME');
+        $user = getenv('DB_USER');
+        $pass = getenv('DB_PASS');
+        $driver = getenv('DB_DRIVER');
+
+        if (!$driver && !$host) {
+            $driver = 'sqlite';
+        }
+
+        $driver = $driver ?: 'mysql';
 
         try {
             if ($driver === 'sqlite') {

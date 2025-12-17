@@ -13,15 +13,24 @@ class ReviewController {
         }
     }
 
-    public function index($widget_id) {
+    public function index($widget_id = null) {
         $pdo = Database::getInstance();
         $user_id = $_SESSION['user_id'];
 
-        // Verify Widget Ownership
-        $stmt = $pdo->prepare("SELECT id FROM widgets WHERE id = ? AND user_id = ?");
-        $stmt->execute([$widget_id, $user_id]);
-        if (!$stmt->fetch()) {
-             die("Unauthorized");
+        if ($widget_id === null) {
+            // Fetch widget for user
+            $stmt = $pdo->prepare("SELECT id FROM widgets WHERE user_id = ? LIMIT 1");
+            $stmt->execute([$user_id]);
+            $widget = $stmt->fetch();
+            if (!$widget) { die("No widget found."); }
+            $widget_id = $widget['id'];
+        } else {
+            // Verify Widget Ownership
+            $stmt = $pdo->prepare("SELECT id FROM widgets WHERE id = ? AND user_id = ?");
+            $stmt->execute([$widget_id, $user_id]);
+            if (!$stmt->fetch()) {
+                die("Unauthorized");
+            }
         }
 
         // Fetch Configuration

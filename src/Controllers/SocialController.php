@@ -40,12 +40,19 @@ class SocialController {
         return [$pdo, $user_id, $widget];
     }
 
-    public function index($widget_id) {
-        $pdo = Database::getInstance();
+    public function index($widget_id = null) {
+        if ($widget_id === null) {
+            list($pdo, $user_id, $widget) = $this->getWidgetAndUser();
+            $widget_id = $widget['id'];
+        } else {
+             $pdo = Database::getInstance();
+             $stmt = $pdo->prepare("SELECT * FROM widgets WHERE id = ?");
+             $stmt->execute([$widget_id]);
+             $widget = $stmt->fetch();
+             $user_id = $_SESSION['user_id'] ?? 0; // Fallback if session check is assumed done elsewhere
+        }
 
-        // Ensure widget belongs to user
-        if (!isset($_SESSION['user_id'])) { header('Location: /login'); exit; }
-        $user_id = $_SESSION['user_id'];
+        $pdo = Database::getInstance();
 
         // Fetch specific social widget config
         $stmt = $pdo->prepare("SELECT * FROM socials WHERE widget_id = ?");

@@ -25,42 +25,56 @@ $router->map('POST', '/register', 'AuthController#processRegister', 'register_po
 // Dashboard
 $router->map('GET', '/', 'DashboardController#index', 'dashboard');
 $router->map('GET', '/settings', 'DashboardController#settings', 'settings');
-$router->map('GET', '/campaigns/[*:type]', 'DashboardController#campaigns', 'campaigns');
-
 $router->map('POST', '/widget/save', 'DashboardController#saveConfig', 'save_config');
-$router->map('POST', '/save-live-visitor-config', 'DashboardController#saveLiveVisitorConfig', 'save_live_visitor');
 $router->map('POST', '/api/toggle-feature', 'DashboardController#toggleFeature', 'api_toggle_feature');
 
-$router->map('POST', '/notification/add', 'DashboardController#addNotification', 'add_notification');
-$router->map('GET', '/notification/delete/[i:id]', 'DashboardController#deleteNotification', 'delete_notification');
-$router->map('GET', '/event/delete/[i:id]', 'DashboardController#deleteEvent', 'delete_event');
+
+// Live Visitors
+$router->map('GET', '/campaigns/live-visitors', 'LiveVisitorController#index', 'live_visitors');
+$router->map('POST', '/save-live-visitor-config', 'LiveVisitorController#saveConfig', 'save_live_visitor');
+
+// Live Conversions
+$router->map('GET', '/campaigns/live-conversion', 'LiveConversionController#index', 'live_conversion');
+$router->map('POST', '/notification/add', 'LiveConversionController#addNotification', 'add_notification');
+$router->map('GET', '/notification/delete/[i:id]', 'LiveConversionController#deleteNotification', 'delete_notification');
+$router->map('GET', '/event/delete/[i:id]', 'LiveConversionController#deleteEvent', 'delete_event');
+
 
 // Coupons
+$router->map('GET', '/campaigns/coupon', 'CouponController#index', 'coupon');
 $router->map('POST', '/campaigns/coupon/save', 'CouponController#save', 'coupon_save');
 $router->map('GET', '/campaigns/coupon/delete/[i:id]', 'CouponController#delete', 'coupon_delete');
 
 // Announcements
+$router->map('GET', '/campaigns/announcement', 'AnnouncementController#index', 'announcement');
 $router->map('POST', '/campaigns/announcement/save', 'AnnouncementController#save', 'announcement_save');
 $router->map('GET', '/campaigns/announcement/delete/[i:id]', 'AnnouncementController#delete', 'announcement_delete');
 
 // Videos
+$router->map('GET', '/campaigns/video', 'VideoController#index', 'video');
 $router->map('POST', '/campaigns/video/save', 'VideoController#save', 'video_save');
 $router->map('GET', '/campaigns/video/delete/[i:id]', 'VideoController#delete', 'video_delete');
 
 // Newsletters
+$router->map('GET', '/campaigns/newsletter', 'NewsletterController#index', 'newsletter');
 $router->map('POST', '/campaigns/newsletter/save', 'NewsletterController#save', 'newsletter_save');
 $router->map('GET', '/campaigns/newsletter/delete/[i:id]', 'NewsletterController#delete', 'newsletter_delete');
 $router->map('GET', '/campaigns/newsletter/leads/[i:id]', 'NewsletterController#leads', 'newsletter_leads');
 $router->map('GET', '/campaigns/newsletter/export/[i:id]', 'NewsletterController#export_leads', 'newsletter_export');
 
-// Social Popup
+// Social
+$router->map('GET', '/campaigns/social', 'SocialController#index', 'social');
 $router->map('POST', '/api/social/save', 'SocialController#save', 'social_save');
 $router->map('POST', '/api/social/toggle', 'SocialController#toggle', 'social_toggle');
 
 // Reviews
+$router->map('GET', '/campaigns/reviews', 'ReviewController#index', 'reviews');
 $router->map('POST', '/campaigns/review/save', 'ReviewController#save', 'review_save');
 $router->map('POST', '/campaigns/review/item/save', 'ReviewController#saveItem', 'review_item_save');
 $router->map('GET', '/campaigns/review/item/delete/[i:id]', 'ReviewController#deleteItem', 'review_item_delete');
+
+// Fallback for other campaigns (e.g. Coming Soon)
+$router->map('GET', '/campaigns/[*:type]', 'DashboardController#campaigns', 'campaigns');
 
 // API / Widget
 $router->map('GET', '/api/widget.js', 'WidgetController#serveScript', 'widget_js');

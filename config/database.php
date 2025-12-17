@@ -27,8 +27,17 @@ class Database {
             $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
         } catch (PDOException $e) {
-            // In production, log this, don't echo
-            die("Database connection failed: " . $e->getMessage());
+            // Log the error details
+            error_log("Database connection failed: " . $e->getMessage());
+
+            // If debug mode is enabled, show the error
+            if (getenv('APP_DEBUG') === 'true') {
+                 die("Database connection failed: " . $e->getMessage());
+            }
+
+            // In production, show a generic message
+            http_response_code(500);
+            die("Service temporarily unavailable. Please try again later.");
         }
     }
 

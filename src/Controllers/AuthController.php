@@ -9,6 +9,12 @@ class AuthController {
         $email = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
 
+        if (empty($email) || empty($password)) {
+            $error = "Email and Password are required.";
+            require_once __DIR__ . '/../../views/login.php';
+            return;
+        }
+
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
         $stmt->execute([$email]);
@@ -19,7 +25,6 @@ class AuthController {
             header('Location: /');
             exit;
         } else {
-            // Pass error to view or just echo
             $error = "Invalid credentials";
             require_once __DIR__ . '/../../views/login.php';
         }

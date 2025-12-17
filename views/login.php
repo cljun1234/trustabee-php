@@ -12,11 +12,15 @@
         button:hover { background: #1557b0; }
         h2 { text-align: center; margin-top: 0; }
         .hint { font-size: 0.8rem; color: #666; text-align: center; margin-top: 10px; }
+        .error { color: red; font-size: 0.9rem; text-align: center; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="login-box">
         <h2>Trustabee</h2>
+        <?php if (isset($error)): ?>
+            <div class="error"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
         <form action="/login" method="POST">
             <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>

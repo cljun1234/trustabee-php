@@ -69,7 +69,7 @@ class AuthController {
 
         } catch (PDOException $e) {
             $error = "Registration failed. Please try again.";
-            // error_log($e->getMessage()); // Log error in production
+            error_log($e->getMessage()); // Log error in production
             require_once __DIR__ . '/../../views/register.php';
         }
     }

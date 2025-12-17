@@ -6,6 +6,11 @@
     <title>Trustabee - <?php echo $pageTitle ?? 'Dashboard'; ?></title>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php
+    if (!isset($plan) && isset($_SESSION['user_id']) && class_exists('PlanManager')) {
+        $plan = PlanManager::getUserPlan($_SESSION['user_id']);
+    }
+    ?>
     <style>
         :root {
             --sidebar-width: 260px;
@@ -188,14 +193,31 @@
                     'newsletter' => ['icon' => 'fa-envelope', 'label' => 'Newsletter'],
                 ];
 
+                $featureKeyMap = [
+                    'live-conversion' => 'live_conversion',
+                    'reviews' => 'reviews',
+                    'live-visitors' => 'live_visitor',
+                    'social' => 'socials',
+                    'coupon' => 'coupons',
+                    'video' => 'videos',
+                    'announcement' => 'notifications',
+                    'newsletter' => 'newsletters',
+                ];
+
                 foreach ($features as $key => $feature):
                     $isSubActive = ($activeSubPage ?? '') === $key;
+                    $planKey = $featureKeyMap[$key] ?? null;
+                    $isLocked = $planKey && empty($plan['features'][$planKey]);
                 ?>
                 <li>
                     <a href="/campaigns/<?php echo $key; ?>" class="nav-link <?php echo $isSubActive ? 'active' : ''; ?>" style="<?php echo $isSubActive ? 'border-right: none; background: #f0f7ff; color: var(--primary-color); font-weight: 600;' : ''; ?>">
                         <i class="fa-solid <?php echo $feature['icon']; ?>"></i>
                         <?php echo $feature['label']; ?>
-                        <?php if(!in_array($key, ['live-conversion', 'live-visitors', 'coupon', 'announcement', 'video', 'newsletter', 'social', 'reviews'])): ?><span class="badge-demo">Demo</span><?php endif; ?>
+                        <?php if($isLocked): ?>
+                            <span class="badge-locked" style="background: #e9ecef; color: #6c757d; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: auto; text-transform: uppercase; font-weight: bold;"><i class="fa-solid fa-lock" style="font-size: 0.6rem; margin-right: 3px;"></i> Locked</span>
+                        <?php elseif(!in_array($key, ['live-conversion', 'live-visitors', 'coupon', 'announcement', 'video', 'newsletter', 'social', 'reviews'])): ?>
+                            <span class="badge-demo">Demo</span>
+                        <?php endif; ?>
                     </a>
                 </li>
                 <?php endforeach; ?>

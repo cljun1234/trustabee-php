@@ -92,6 +92,31 @@ class DashboardController {
     public function campaigns($type) {
         list($pdo, $user_id, $widget) = $this->getWidgetAndUser();
 
+        // Feature Locking Check
+        $featureMap = [
+            'reviews' => 'reviews',
+            'social' => 'socials',
+            'live-visitors' => 'live_visitor',
+            'coupon' => 'coupons',
+            'announcement' => 'notifications',
+            'video' => 'videos',
+            'newsletter' => 'newsletters',
+            'live-conversion' => 'live_conversion'
+        ];
+
+        if (isset($featureMap[$type])) {
+            require_once __DIR__ . '/../Helpers/PlanManager.php';
+            $plan = PlanManager::getUserPlan($user_id);
+            if (empty($plan['features'][$featureMap[$type]])) {
+                // Feature Locked
+                $activePage = 'campaigns';
+                $activeSubPage = $type;
+                $pageTitle = 'Locked';
+                require_once __DIR__ . '/../../views/locked.php';
+                return;
+            }
+        }
+
         $controllerName = null;
 
         switch ($type) {

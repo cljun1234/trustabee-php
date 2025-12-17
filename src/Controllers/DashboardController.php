@@ -91,7 +91,51 @@ class DashboardController {
     public function campaigns($type) {
         list($pdo, $user_id, $widget) = $this->getWidgetAndUser();
 
-        // Generic placeholder
+        $controllerName = null;
+
+        switch ($type) {
+            case 'reviews':
+                $controllerName = 'ReviewController';
+                break;
+            case 'social':
+                $controllerName = 'SocialController';
+                break;
+            case 'live-visitors':
+                $controllerName = 'LiveVisitorController';
+                break;
+            case 'coupon':
+                $controllerName = 'CouponController';
+                break;
+            case 'announcement':
+                $controllerName = 'AnnouncementController';
+                break;
+            case 'video':
+                $controllerName = 'VideoController';
+                break;
+            case 'newsletter':
+                $controllerName = 'NewsletterController';
+                break;
+            case 'live-conversion':
+                $controllerName = 'LiveConversionController';
+                break;
+        }
+
+        if ($controllerName) {
+            // Load and instantiate the controller
+            $controllerFile = __DIR__ . '/' . $controllerName . '.php';
+            if (file_exists($controllerFile)) {
+                require_once $controllerFile;
+                if (class_exists($controllerName)) {
+                    $controller = new $controllerName();
+                    if (method_exists($controller, 'index')) {
+                        $controller->index($widget['id']);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Generic placeholder for undefined types
         $campaignType = $type;
         require_once __DIR__ . '/../../views/campaigns/placeholder.php';
     }

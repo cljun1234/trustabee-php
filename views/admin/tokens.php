@@ -5,7 +5,7 @@
     <!-- List Tokens -->
     <div style="flex: 1;">
         <?php foreach ($tokens as $token):
-            $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
+            $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'];
             $magicLink = $baseUrl . "/partner-auth?token=" . $token['token'] . "&source=partner&email={USER_EMAIL}";
         ?>
         <div class="card" style="margin-bottom: 10px;">

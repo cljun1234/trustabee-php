@@ -123,7 +123,7 @@ class PartnerController {
         // Note: Most modern browsers require Secure=true for SameSite=None.
 
         // We will just redirect to dashboard.
-        header("Location: /dashboard");
+        header("Location: /");
         exit;
     }
 

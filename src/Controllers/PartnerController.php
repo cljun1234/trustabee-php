@@ -132,6 +132,9 @@ class PartnerController {
         $_SESSION['role'] = $user['role'];
         $_SESSION['logged_in'] = true;
 
+        // Set Iframe Mode Flag
+        $_SESSION['iframe_mode'] = true;
+
         // Set Cookie for iframe support (SameSite=None)
         // PHP session cookie params usually set in php.ini, but we might need to override.
         // session_set_cookie_params(['samesite' => 'None', 'secure' => true]);

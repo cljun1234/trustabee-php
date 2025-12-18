@@ -62,6 +62,9 @@ function renderNavItem($url, $icon, $label, $activeCondition, $iframeMode) {
 
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/assets/css/style.css?v=<?php echo time(); ?>">
+
+    <!-- Pickr CSS (Color Picker) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"/>
 </head>
 <body class="<?php echo $iframeMode ? 'iframe-mode' : ''; ?>">
 

@@ -7,6 +7,7 @@
 CREATE TABLE IF NOT EXISTS plans (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    display_name VARCHAR(255) DEFAULT NULL, -- Public facing name
     monthly_price DECIMAL(10, 2) DEFAULT 0.00,
     visit_limit INT DEFAULT 1000, -- -1 for unlimited
     domain_limit INT DEFAULT 1, -- -1 for unlimited
@@ -15,11 +16,12 @@ CREATE TABLE IF NOT EXISTS plans (
 );
 
 -- Seed Plans (Safe Insert)
-INSERT IGNORE INTO plans (id, name, monthly_price, visit_limit, domain_limit, features) VALUES
-(1, 'Free', 0.00, 1000, 1, '{"remove_branding": false, "coupons": true, "notifications": true, "videos": false}'),
-(2, 'Basic', 9.00, 10000, 3, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true}'),
-(3, 'Pro', 29.00, 50000, 10, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true}'),
-(4, 'Unlimited', 99.00, -1, -1, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true}');
+INSERT IGNORE INTO plans (id, name, display_name, monthly_price, visit_limit, domain_limit, features) VALUES
+(1, 'Free', 'Free Plan', 0.00, 1000, 1, '{"remove_branding": false, "coupons": true, "notifications": true, "videos": false}'),
+(2, 'Basic', 'Basic Plan', 9.00, 10000, 3, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true}'),
+(3, 'Pro', 'Pro Plan', 29.00, 50000, 10, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true}'),
+(4, 'Unlimited', 'Unlimited Plan', 99.00, -1, -1, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true}'),
+(5, 'Sponsored', 'Unlimited', 0.00, -1, -1, '{"remove_branding": true, "coupons": true, "notifications": true, "videos": true, "newsletters": true, "socials": true, "reviews": true, "live_visitor": true, "live_conversion": true}');
 
 -- 2. USERS
 CREATE TABLE IF NOT EXISTS users (
@@ -396,6 +398,15 @@ CREATE TABLE IF NOT EXISTS user_devices (
     INDEX (device_token)
 );
 
+-- 19. PARTNER TOKENS (Sponsored Plans)
+CREATE TABLE IF NOT EXISTS partner_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    allowed_domains TEXT, -- JSON or comma separated
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 
 -- =================================================================
 -- UPDATER STORED PROCEDURE (SAFE ADD COLUMNS)
@@ -451,6 +462,13 @@ BEGIN
     IF NOT EXISTS(SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='socials' AND COLUMN_NAME='position') THEN
         ALTER TABLE socials ADD COLUMN position VARCHAR(50) DEFAULT 'bottom-right';
     END IF;
+
+    -- 4. PLANS: Add display_name
+    IF NOT EXISTS(SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='plans' AND COLUMN_NAME='display_name') THEN
+        ALTER TABLE plans ADD COLUMN display_name VARCHAR(255) DEFAULT NULL;
+    END IF;
+
+    -- 5. PARTNER TOKENS: Ensure table exists (handled by CREATE TABLE IF NOT EXISTS above, but good for completeness if we were doing pure alters)
 
 END//
 DELIMITER ;

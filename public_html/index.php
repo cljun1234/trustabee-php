@@ -1,4 +1,15 @@
 <?php
+// Set Cookie Params for iframe compatibility (SameSite=None; Secure)
+// This must be set before session_start()
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => $_SERVER['HTTP_HOST'] ?? '',
+    'secure' => true, // Required for SameSite=None
+    'httponly' => true,
+    'samesite' => 'None'
+]);
+
 session_start();
 
 // Error Reporting Configuration
@@ -58,6 +69,13 @@ $router->map('POST', '/admin/users/plan', 'AdminController#updateUserPlan', 'adm
 $router->map('POST', '/admin/users/role', 'AdminController#toggleUserRole', 'admin_users_role');
 $router->map('GET', '/admin/email', 'AdminController#emailSettings', 'admin_email');
 $router->map('POST', '/admin/email/save', 'AdminController#saveEmailSettings', 'admin_email_save');
+$router->map('GET', '/admin/tokens', 'AdminController#tokens', 'admin_tokens');
+$router->map('POST', '/admin/tokens/save', 'AdminController#saveToken', 'admin_tokens_save');
+$router->map('POST', '/admin/tokens/delete', 'AdminController#deleteToken', 'admin_tokens_delete');
+
+
+// Partner Auth
+$router->map('GET', '/partner-auth', 'PartnerController#authenticate', 'partner_auth');
 
 
 // Live Visitors (Index handled by DashboardController for locking)

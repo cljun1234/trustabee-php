@@ -39,6 +39,8 @@ class PartnerController {
             $domainList = array_map('trim', explode(',', $allowedDomains));
         }
 
+        $validatedHost = null;
+
         // If list is not empty, we MUST validate referer
         if (!empty($domainList) && count($domainList) > 0 && $allowedDomains !== '') {
             $referer = $_SERVER['HTTP_REFERER'] ?? '';
@@ -52,6 +54,7 @@ class PartnerController {
             foreach ($domainList as $d) {
                 if ($d === $refererHost || $d === $originHost) {
                     $isValid = true;
+                    $validatedHost = $d; // Capture valid host
                     break;
                 }
             }
@@ -60,6 +63,12 @@ class PartnerController {
                 // "check if the domain that loads the iframe is valid, if its invalid then show invalid page with button to home page"
                 $this->showError("Unauthorized Domain. This link can only be accessed from authorized partners.");
                 return;
+            }
+        } else {
+            // If allowed domains is empty, try to get host from referer anyway for auto-widget creation
+            // if it is a valid URL
+            if (!empty($_SERVER['HTTP_REFERER'])) {
+                 $validatedHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
             }
         }
 
@@ -88,6 +97,19 @@ class PartnerController {
                 $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
                 $stmt->execute([$userId]);
                 $user = $stmt->fetch();
+
+                // AUTO-CREATE WIDGET if host is available
+                // This solves "No widget found" error on first login
+                if ($validatedHost) {
+                    $widgetName = $validatedHost;
+                    $stmt = $pdo->prepare("INSERT INTO widgets (user_id, domain, name, magical_detection, created_at) VALUES (?, ?, ?, 1, NOW())");
+                    $stmt->execute([$userId, $validatedHost, $widgetName]);
+                } else {
+                    // Fallback if no referer (e.g. direct link test), maybe create a placeholder?
+                    // "My First Widget"
+                    $stmt = $pdo->prepare("INSERT INTO widgets (user_id, domain, name, magical_detection, created_at) VALUES (?, 'example.com', 'My First Widget', 1, NOW())");
+                    $stmt->execute([$userId]);
+                }
 
             } catch (Exception $e) {
                 $this->showError("Registration failed: " . $e->getMessage());

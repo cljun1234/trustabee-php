@@ -35,6 +35,13 @@ $router->map('POST', '/login', 'AuthController#processLogin', 'login_post');
 $router->map('GET', '/logout', 'AuthController#logout', 'logout');
 $router->map('GET', '/register', 'AuthController#showRegister', 'register');
 $router->map('POST', '/register', 'AuthController#processRegister', 'register_post');
+$router->map('GET', '/verify-otp', 'AuthController#showVerifyOTP', 'verify_otp');
+$router->map('POST', '/verify-otp', 'AuthController#processVerifyOTP', 'verify_otp_post');
+$router->map('POST', '/resend-otp', 'AuthController#resendOTP', 'resend_otp');
+$router->map('GET', '/forgot-password', 'AuthController#showForgotPassword', 'forgot_password');
+$router->map('POST', '/forgot-password', 'AuthController#processForgotPassword', 'forgot_password_post');
+$router->map('GET', '/reset-password', 'AuthController#showResetPassword', 'reset_password');
+$router->map('POST', '/reset-password', 'AuthController#processResetPassword', 'reset_password_post');
 
 // Dashboard
 $router->map('GET', '/', 'DashboardController#index', 'dashboard');
@@ -49,6 +56,8 @@ $router->map('POST', '/admin/plans/save', 'AdminController#savePlan', 'admin_pla
 $router->map('GET', '/admin/users', 'AdminController#users', 'admin_users');
 $router->map('POST', '/admin/users/plan', 'AdminController#updateUserPlan', 'admin_users_plan');
 $router->map('POST', '/admin/users/role', 'AdminController#toggleUserRole', 'admin_users_role');
+$router->map('GET', '/admin/email', 'AdminController#emailSettings', 'admin_email');
+$router->map('POST', '/admin/email/save', 'AdminController#saveEmailSettings', 'admin_email_save');
 
 
 // Live Visitors (Index handled by DashboardController for locking)

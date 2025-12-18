@@ -28,7 +28,8 @@
         </form>
         <p class="hint">Try: admin@trustabee.com / password</p>
         <div style="text-align: center; margin-top: 15px; font-size: 0.9rem;">
-            Don't have an account? <a href="/register" style="color: #1a73e8; text-decoration: none;">Register here</a>
+            <a href="/register" style="color: #1a73e8; text-decoration: none;">Register</a> |
+            <a href="/forgot-password" style="color: #1a73e8; text-decoration: none;">Forgot Password?</a>
         </div>
     </div>
 </body>

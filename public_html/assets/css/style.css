@@ -1,0 +1,231 @@
+:root {
+    --primary-color: #0084ff;
+    --primary-hover: #006bcf;
+    --bg-color: #f6f7f9;
+    --text-color: #354052;
+    --sidebar-bg: #ffffff;
+    --sidebar-width: 260px;
+    --card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --card-radius: 0.75rem; /* Rounded edges */
+    --nav-height: 64px;
+}
+
+body {
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+}
+
+a {
+    text-decoration: none;
+}
+
+/* Material Card Style */
+.card {
+    background: #ffffff;
+    border: none;
+    border-radius: var(--card-radius);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    transition: box-shadow 0.2s;
+}
+
+.card:hover {
+    box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* --- Standard Sidebar Layout --- */
+.wrapper {
+    display: flex;
+    width: 100%;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    border-right: 1px solid rgba(0,0,0,0.05);
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-brand {
+    padding: 0 1.5rem;
+    height: var(--nav-height);
+    display: flex;
+    align-items: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+.sidebar-brand i {
+    color: var(--primary-color);
+    margin-right: 0.75rem;
+}
+
+.sidebar-nav {
+    padding: 1rem 0;
+    flex-grow: 1;
+}
+
+.nav-item .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    color: #4a5568;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-radius: 0 2rem 2rem 0;
+    margin-right: 1rem;
+}
+
+.nav-item .nav-link:hover {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+}
+
+.nav-item .nav-link.active {
+    background-color: #e6f2ff;
+    color: var(--primary-color);
+}
+
+.nav-item .nav-link i {
+    width: 24px;
+    margin-right: 0.75rem;
+    text-align: center;
+}
+
+/* Submenu Styling */
+.submenu {
+    list-style: none;
+    padding-left: 0;
+    background-color: #fafbfc;
+}
+.submenu .nav-link {
+    padding-left: 3.5rem;
+    font-size: 0.9rem;
+}
+
+/* Main Content Area (Standard) */
+.main-content {
+    margin-left: var(--sidebar-width);
+    padding: 2rem;
+    width: calc(100% - var(--sidebar-width));
+    transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+/* --- Iframe Mode Layout --- */
+.iframe-mode .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 1.5rem;
+    margin-top: var(--nav-height); /* Space for fixed navbar */
+}
+
+/* Top Navbar (Iframe Mode) */
+.top-navbar {
+    height: var(--nav-height);
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1020;
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.top-navbar .nav-link {
+    color: #4a5568;
+    font-weight: 500;
+    margin-left: 1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+}
+
+.top-navbar .nav-link:hover,
+.top-navbar .nav-link.active {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+}
+
+/* Offcanvas Menu (Mobile / Iframe specific) */
+.offcanvas-body .nav-link {
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+}
+
+/* Utility Badges */
+.badge-demo, .badge-locked {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: auto;
+}
+.badge-demo { background: #e2e8f0; color: #64748b; }
+.badge-locked { background: #e9ecef; color: #6c757d; }
+
+
+/* Form Elements Overrides */
+.form-control {
+    border-radius: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-color: #e2e8f0;
+}
+.form-control:focus {
+    box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.15);
+    border-color: var(--primary-color);
+}
+
+.btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+}
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 991.98px) {
+    /* Standard Mode: Sidebar becomes offcanvas or similar behavior if using Bootstrap's grid */
+    /* For custom sidebar class: */
+    body:not(.iframe-mode) .sidebar {
+        transform: translateX(-100%);
+    }
+    body:not(.iframe-mode) .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+    body:not(.iframe-mode).sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+}

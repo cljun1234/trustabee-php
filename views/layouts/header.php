@@ -1,277 +1,293 @@
+<?php
+// Initialize session if not already started (though typically handled by router/index)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$pageTitle = $pageTitle ?? 'Dashboard';
+$iframeMode = $_SESSION['iframe_mode'] ?? false;
+
+// Ensure User Plan is Loaded
+if (!isset($plan) && isset($_SESSION['user_id']) && class_exists('PlanManager')) {
+    $plan = PlanManager::getUserPlan($_SESSION['user_id']);
+}
+
+// Define Features Array for Menu Generation
+$features = [
+    'live-conversion' => ['icon' => 'fa-cart-shopping', 'label' => 'Live Conversion', 'plan_key' => 'live_conversion'],
+    'low-stock' => ['icon' => 'fa-box-open', 'label' => 'Low Stock'],
+    'urgency' => ['icon' => 'fa-hourglass-half', 'label' => 'Urgency'],
+    'timer' => ['icon' => 'fa-clock', 'label' => 'Timer'],
+    'reviews' => ['icon' => 'fa-star', 'label' => 'Reviews', 'plan_key' => 'reviews'],
+    'live-visitors' => ['icon' => 'fa-users', 'label' => 'Live Visitors', 'plan_key' => 'live_visitor'],
+    'in-line-text' => ['icon' => 'fa-font', 'label' => 'In-Line Text'],
+    'callback' => ['icon' => 'fa-phone', 'label' => 'Callback'],
+    'social' => ['icon' => 'fa-share-nodes', 'label' => 'Social', 'plan_key' => 'socials'],
+    'coupon' => ['icon' => 'fa-ticket', 'label' => 'Coupon', 'plan_key' => 'coupons'],
+    'video' => ['icon' => 'fa-video', 'label' => 'Video', 'plan_key' => 'videos'],
+    'announcement' => ['icon' => 'fa-bullhorn', 'label' => 'Announcement', 'plan_key' => 'notifications'],
+    'newsletter' => ['icon' => 'fa-envelope', 'label' => 'Newsletter', 'plan_key' => 'newsletters'],
+];
+
+// Helper to generate a nav item
+function renderNavItem($url, $icon, $label, $activeCondition, $iframeMode) {
+    $activeClass = $activeCondition ? 'active' : '';
+    // For iframe mode, we might want fewer styles or specific classes, but style.css handles .top-navbar .nav-link vs .sidebar .nav-link
+    return "
+    <li class='nav-item'>
+        <a href='{$url}' class='nav-link {$activeClass}'>
+            <i class='fa-solid {$icon}'></i>
+            " . ($iframeMode ? "<span class='d-lg-none d-xl-block ms-2'>{$label}</span>" : "<span class='ms-2'>{$label}</span>") . "
+             " . ($iframeMode ? "<span class='d-none d-lg-inline ms-2'>{$label}</span>" : "") . "
+        </a>
+    </li>";
+}
+// Actually, simple text rendering is better, let CSS handle visibility if needed.
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trustabee - <?php echo $pageTitle ?? 'Dashboard'; ?></title>
+    <title>Trustabee - <?php echo $pageTitle; ?></title>
+
+    <!-- Google Fonts: Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <?php
-    if (!isset($plan) && isset($_SESSION['user_id']) && class_exists('PlanManager')) {
-        $plan = PlanManager::getUserPlan($_SESSION['user_id']);
-    }
-    ?>
-    <style>
-        :root {
-            --sidebar-width: 260px;
-            --primary-color: #0084ff; /* ManyChat blue-ish */
-            --bg-color: #f6f7f9;
-            --text-color: #354052;
-            --sidebar-bg: #ffffff;
-            --sidebar-hover: #f0f2f5;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg-color);
-            margin: 0;
-            padding: 0;
-            color: var(--text-color);
-            display: flex;
-            min-height: 100vh;
-        }
 
-        /* Sidebar */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: var(--sidebar-bg);
-            border-right: 1px solid #e1e4e8;
-            display: flex;
-            flex-direction: column;
-            position: fixed;
-            height: 100%;
-            overflow-y: auto;
-            z-index: 100;
-        }
-        .logo-area {
-            padding: 20px 24px;
-            font-weight: 800;
-            font-size: 1.4rem;
-            color: #1a1a1a;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .logo-area i { color: var(--primary-color); }
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-        .nav-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            flex-grow: 1;
-        }
-        .nav-item {
-            margin-bottom: 2px;
-        }
-        .nav-link {
-            display: flex;
-            align-items: center;
-            padding: 12px 24px;
-            color: #4a5568;
-            text-decoration: none;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: background 0.2s, color 0.2s;
-        }
-        .nav-link:hover {
-            background: var(--sidebar-hover);
-            color: var(--primary-color);
-        }
-        .nav-link.active {
-            background: #e6f2ff;
-            color: var(--primary-color);
-            border-right: 3px solid var(--primary-color);
-        }
-        .nav-link i {
-            width: 24px;
-            margin-right: 10px;
-            text-align: center;
-        }
-
-        /* Submenu */
-        .submenu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            background: #fcfcfc;
-            display: none; /* Hidden by default */
-        }
-        .submenu.open {
-            display: block;
-        }
-        .submenu .nav-link {
-            padding-left: 58px; /* Indent */
-            font-size: 0.9rem;
-        }
-
-        .badge-demo {
-            background: #e2e8f0;
-            color: #64748b;
-            font-size: 0.65rem;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-left: auto;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex-grow: 1;
-            margin-left: var(--sidebar-width);
-            padding: 30px 40px;
-            overflow-y: auto;
-        }
-
-        /* Top Bar in Main Content (Optional, for greeting/profile) */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        .page-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        /* Common Components from original dashboard */
-        .card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .stat-box { background: #e8f0fe; color: #1a73e8; padding: 1rem; border-radius: 8px; text-align: center; font-size: 1.5rem; font-weight: bold; display: inline-block; min-width: 100px; }
-        .stat-label { font-size: 0.8rem; font-weight: normal; display: block; color: #555; }
-        textarea.code-block { width: 100%; height: 60px; font-family: monospace; padding: 10px; background: #2d2d2d; color: #f8f8f2; border-radius: 4px; border: none; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
-        th { color: #666; font-size: 0.9rem; }
-        .btn { padding: 8px 16px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.9rem; }
-        .btn-sm { padding: 4px 8px; font-size: 0.8rem; background: #dc3545; }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; margin-bottom: 5px; font-weight: 500; }
-        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
-        .toggle { display: flex; align-items: center; }
-        .toggle input { margin-right: 10px; }
-
-        /* Utility */
-        .text-muted { color: #6c757d; }
-    </style>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/assets/css/style.css?v=<?php echo time(); ?>">
 </head>
-<body>
+<body class="<?php echo $iframeMode ? 'iframe-mode' : ''; ?>">
 
-<aside class="sidebar">
-    <div class="logo-area">
-        <i class="fa-solid fa-layer-group"></i> Trustabee
-    </div>
-
-    <ul class="nav-menu">
-        <li class="nav-item">
-            <a href="/" class="nav-link <?php echo ($activePage == 'home') ? 'active' : ''; ?>">
-                <i class="fa-solid fa-house"></i> Home
+<?php if ($iframeMode): ?>
+    <!-- Iframe Mode: Top Navbar -->
+    <nav class="navbar navbar-expand-lg top-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fa-solid fa-layer-group text-primary me-2"></i> Trustabee
             </a>
-        </li>
 
-        <li class="nav-item">
-            <a href="#" class="nav-link <?php echo ($activePage == 'campaigns') ? 'active' : ''; ?>" onclick="toggleSubmenu('campaigns-submenu'); return false;">
-                <i class="fa-solid fa-bullhorn"></i> Campaigns
-                <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; margin-left: auto; width: auto;"></i>
-            </a>
-            <ul id="campaigns-submenu" class="submenu <?php echo ($activePage == 'campaigns') ? 'open' : ''; ?>">
-                <?php
-                $features = [
-                    'live-conversion' => ['icon' => 'fa-cart-shopping', 'label' => 'Live Conversion'],
-                    'low-stock' => ['icon' => 'fa-box-open', 'label' => 'Low Stock'],
-                    'urgency' => ['icon' => 'fa-hourglass-half', 'label' => 'Urgency'],
-                    'timer' => ['icon' => 'fa-clock', 'label' => 'Timer'],
-                    'reviews' => ['icon' => 'fa-star', 'label' => 'Reviews'],
-                    'live-visitors' => ['icon' => 'fa-users', 'label' => 'Live Visitors'],
-                    'in-line-text' => ['icon' => 'fa-font', 'label' => 'In-Line Text'],
-                    'callback' => ['icon' => 'fa-phone', 'label' => 'Callback'],
-                    'social' => ['icon' => 'fa-share-nodes', 'label' => 'Social'],
-                    'coupon' => ['icon' => 'fa-ticket', 'label' => 'Coupon'],
-                    'video' => ['icon' => 'fa-video', 'label' => 'Video'],
-                    'announcement' => ['icon' => 'fa-bullhorn', 'label' => 'Announcement'],
-                    'newsletter' => ['icon' => 'fa-envelope', 'label' => 'Newsletter'],
-                ];
+            <!-- Mobile Toggle (Hamburger on Right) -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-                $featureKeyMap = [
-                    'live-conversion' => 'live_conversion',
-                    'reviews' => 'reviews',
-                    'live-visitors' => 'live_visitor',
-                    'social' => 'socials',
-                    'coupon' => 'coupons',
-                    'video' => 'videos',
-                    'announcement' => 'notifications',
-                    'newsletter' => 'newsletters',
-                ];
+            <!-- Desktop Menu (Horizontal) -->
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo ($activePage == 'home') ? 'active' : ''; ?>" href="/">Home</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle <?php echo ($activePage == 'campaigns') ? 'active' : ''; ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Campaigns
+                        </a>
+                        <ul class="dropdown-menu border-0 shadow">
+                             <?php foreach ($features as $key => $feature):
+                                $isSubActive = ($activeSubPage ?? '') === $key;
+                            ?>
+                            <li><a class="dropdown-item <?php echo $isSubActive ? 'active' : ''; ?>" href="/campaigns/<?php echo $key; ?>">
+                                <i class="fa-solid <?php echo $feature['icon']; ?> me-2"></i> <?php echo $feature['label']; ?>
+                            </a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo ($activePage == 'billing') ? 'active' : ''; ?>" href="/billing">Billing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo ($activePage == 'settings') ? 'active' : ''; ?>" href="/settings">Settings</a>
+                    </li>
+                     <?php if (($_SESSION['role'] ?? 'user') === 'owner'): ?>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Admin</a>
+                        <ul class="dropdown-menu border-0 shadow">
+                            <li><a class="dropdown-item" href="/admin/users">Manage Users</a></li>
+                            <li><a class="dropdown-item" href="/admin/plans">Manage Plans</a></li>
+                            <li><a class="dropdown-item" href="/admin/tokens">Partner Tokens</a></li>
+                            <li><a class="dropdown-item" href="/admin/email">Manage Email</a></li>
+                        </ul>
+                    </li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-                foreach ($features as $key => $feature):
-                    $isSubActive = ($activeSubPage ?? '') === $key;
-                    $planKey = $featureKeyMap[$key] ?? null;
-                    $isLocked = $planKey && empty($plan['features'][$planKey]);
-                ?>
-                <li>
-                    <a href="/campaigns/<?php echo $key; ?>" class="nav-link <?php echo $isSubActive ? 'active' : ''; ?>" style="<?php echo $isSubActive ? 'border-right: none; background: #f0f7ff; color: var(--primary-color); font-weight: 600;' : ''; ?>">
-                        <i class="fa-solid <?php echo $feature['icon']; ?>"></i>
-                        <?php echo $feature['label']; ?>
-                        <?php if($isLocked): ?>
-                            <span class="badge-locked" style="background: #e9ecef; color: #6c757d; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: auto; text-transform: uppercase; font-weight: bold;"><i class="fa-solid fa-lock" style="font-size: 0.6rem; margin-right: 3px;"></i> Locked</span>
-                        <?php elseif(!in_array($key, ['live-conversion', 'live-visitors', 'coupon', 'announcement', 'video', 'newsletter', 'social', 'reviews'])): ?>
-                            <span class="badge-demo">Demo</span>
-                        <?php endif; ?>
-                    </a>
+    <!-- Mobile Offcanvas Menu (Right Side) -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title fw-bold" id="offcanvasRightLabel">
+                <i class="fa-solid fa-layer-group text-primary me-2"></i> Trustabee
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+                 <li class="nav-item">
+                    <a class="nav-link <?php echo ($activePage == 'home') ? 'active' : ''; ?>" href="/"><i class="fa-solid fa-house me-2"></i> Home</a>
                 </li>
-                <?php endforeach; ?>
+                <li class="nav-item">
+                    <a class="nav-link collapsed" data-bs-toggle="collapse" href="#mobileCampaigns" role="button" aria-expanded="false">
+                        <i class="fa-solid fa-bullhorn me-2"></i> Campaigns <i class="fa-solid fa-chevron-down ms-auto" style="font-size: 0.8rem"></i>
+                    </a>
+                    <div class="collapse" id="mobileCampaigns">
+                        <ul class="list-unstyled ps-3">
+                        <?php foreach ($features as $key => $feature): ?>
+                            <li><a class="nav-link py-2" href="/campaigns/<?php echo $key; ?>"><?php echo $feature['label']; ?></a></li>
+                        <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/billing"><i class="fa-solid fa-credit-card me-2"></i> Billing</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/settings"><i class="fa-solid fa-gear me-2"></i> Settings</a>
+                </li>
+                <!-- No Logout for Iframe Mode as requested -->
             </ul>
-        </li>
-
-        <li class="nav-item">
-            <a href="/billing" class="nav-link <?php echo ($activePage == 'billing') ? 'active' : ''; ?>">
-                <i class="fa-solid fa-credit-card"></i> Billing
-            </a>
-        </li>
-
-        <li class="nav-item">
-            <a href="/settings" class="nav-link <?php echo ($activePage == 'settings') ? 'active' : ''; ?>">
-                <i class="fa-solid fa-gear"></i> Settings
-            </a>
-        </li>
-
-        <?php if (($_SESSION['role'] ?? 'user') === 'owner'): ?>
-        <li class="nav-item" style="margin-top: 10px; border-top: 1px solid #eee;">
-            <div style="padding: 10px 24px; font-size: 0.75rem; text-transform: uppercase; color: #999; font-weight: bold;">Super Admin</div>
-        </li>
-        <li class="nav-item">
-            <a href="/admin/users" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'users') ? 'active' : ''; ?>">
-                <i class="fa-solid fa-users-gear"></i> Manage Users
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/admin/plans" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'plans') ? 'active' : ''; ?>">
-                <i class="fa-solid fa-clipboard-list"></i> Manage Plans
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/admin/tokens" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'tokens') ? 'active' : ''; ?>">
-                <i class="fa-solid fa-key"></i> Partner Tokens
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/admin/email" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'email') ? 'active' : ''; ?>">
-                <i class="fa-solid fa-envelope"></i> Manage Email
-            </a>
-        </li>
-        <?php endif; ?>
-    </ul>
-
-    <div style="margin-top: auto; padding: 20px;">
-         <a href="/logout" class="nav-link" style="color: #dc3545;">
-            <i class="fa-solid fa-right-from-bracket"></i> Logout
-        </a>
+        </div>
     </div>
-</aside>
+
+<?php else: ?>
+    <!-- Standard Mode: Sidebar -->
+    <!-- Mobile Toggle for Sidebar -->
+    <div class="d-lg-none p-3 position-fixed w-100 bg-white shadow-sm" style="z-index: 1001; top:0;">
+        <button class="btn btn-outline-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <span class="ms-3 fw-bold">Trustabee</span>
+    </div>
+
+    <!-- Desktop Sidebar (Hidden on Mobile) -->
+    <aside class="sidebar d-none d-lg-flex">
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-layer-group"></i> Trustabee
+        </div>
+        <ul class="nav flex-column sidebar-nav">
+            <li class="nav-item">
+                <a href="/" class="nav-link <?php echo ($activePage == 'home') ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-house"></i> Home
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#campaignsSubmenu" class="nav-link <?php echo ($activePage == 'campaigns') ? 'active' : ''; ?>" data-bs-toggle="collapse">
+                    <i class="fa-solid fa-bullhorn"></i> Campaigns
+                    <i class="fa-solid fa-chevron-down ms-auto" style="font-size: 0.7rem;"></i>
+                </a>
+                <div class="collapse <?php echo ($activePage == 'campaigns') ? 'show' : ''; ?>" id="campaignsSubmenu">
+                    <ul class="submenu list-unstyled">
+                        <?php foreach ($features as $key => $feature):
+                            $isSubActive = ($activeSubPage ?? '') === $key;
+                            $planKey = $feature['plan_key'] ?? null;
+                            $isLocked = $planKey && empty($plan['features'][$planKey]);
+
+                            // Check if unimplemented
+                            $implemented = in_array($key, ['live-conversion', 'live-visitors', 'coupon', 'announcement', 'video', 'newsletter', 'social', 'reviews']);
+                        ?>
+                        <li>
+                            <a href="/campaigns/<?php echo $key; ?>" class="nav-link <?php echo $isSubActive ? 'active' : ''; ?>">
+                                <?php echo $feature['label']; ?>
+                                <?php if($isLocked): ?>
+                                    <span class="badge-locked"><i class="fa-solid fa-lock"></i> Locked</span>
+                                <?php elseif(!$implemented): ?>
+                                    <span class="badge-demo">Demo</span>
+                                <?php endif; ?>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a href="/billing" class="nav-link <?php echo ($activePage == 'billing') ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-credit-card"></i> Billing
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/settings" class="nav-link <?php echo ($activePage == 'settings') ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </a>
+            </li>
+
+            <?php if (($_SESSION['role'] ?? 'user') === 'owner'): ?>
+            <li class="nav-item mt-3">
+                <div class="text-uppercase text-muted fw-bold px-4 small mb-2">Super Admin</div>
+            </li>
+            <li class="nav-item">
+                <a href="/admin/users" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'users') ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-users-gear"></i> Manage Users
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/admin/plans" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'plans') ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-clipboard-list"></i> Manage Plans
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/admin/tokens" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'tokens') ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-key"></i> Partner Tokens
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/admin/email" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'email') ? 'active' : ''; ?>">
+                    <i class="fa-solid fa-envelope"></i> Manage Email
+                </a>
+            </li>
+            <?php endif; ?>
+        </ul>
+        <div class="p-3 mt-auto">
+             <a href="/logout" class="nav-link text-danger">
+                <i class="fa-solid fa-right-from-bracket me-2"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile Offcanvas Sidebar -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title fw-bold">Trustabee</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+             <!-- Reuse same nav structure or simplified one -->
+             <ul class="nav flex-column sidebar-nav">
+                <!-- ... Repeat content or use PHP include if extracted ... -->
+                <!-- Copying logic for simplicity in this single file edit -->
+                <li class="nav-item"><a href="/" class="nav-link"><i class="fa-solid fa-house"></i> Home</a></li>
+                <li class="nav-item">
+                    <a href="#mobCamp" class="nav-link" data-bs-toggle="collapse">
+                        <i class="fa-solid fa-bullhorn"></i> Campaigns
+                    </a>
+                    <div class="collapse" id="mobCamp">
+                        <ul class="submenu list-unstyled">
+                             <?php foreach ($features as $key => $feature): ?>
+                                <li><a href="/campaigns/<?php echo $key; ?>" class="nav-link"><?php echo $feature['label']; ?></a></li>
+                             <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </li>
+                <li class="nav-item"><a href="/billing" class="nav-link"><i class="fa-solid fa-credit-card"></i> Billing</a></li>
+                <li class="nav-item"><a href="/settings" class="nav-link"><i class="fa-solid fa-gear"></i> Settings</a></li>
+                <li class="nav-item"><a href="/logout" class="nav-link text-danger"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+<?php endif; ?>
 
 <main class="main-content">
-    <div class="top-bar">
-        <h1 class="page-title"><?php echo $pageTitle ?? 'Dashboard'; ?></h1>
-        <!-- User profile or status could go here -->
+    <?php if(!$iframeMode): ?>
+    <div class="d-none d-lg-block mb-4">
+        <h1 class="h3 fw-bold text-dark mb-0"><?php echo $pageTitle; ?></h1>
     </div>
+    <!-- Mobile Spacer -->
+    <div class="d-lg-none" style="height: 60px;"></div>
+    <?php endif; ?>

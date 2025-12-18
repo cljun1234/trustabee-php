@@ -209,6 +209,9 @@ class AuthController {
     }
 
     public function showForgotPassword() {
+        if (isset($_GET['error']) && $_GET['error'] === 'invalid_token') {
+            $error = "Your reset link has expired or is invalid. Please request a new one.";
+        }
         require_once __DIR__ . '/../../views/forgot_password.php';
     }
 
@@ -240,18 +243,16 @@ class AuthController {
     public function showResetPassword() {
         $token = $_GET['token'] ?? '';
         if (empty($token)) {
-            $error = "Invalid token.";
-            require_once __DIR__ . '/../../views/reset_password.php';
-            return;
+            header('Location: /forgot-password?error=invalid_token');
+            exit;
         }
         // Verify token existence/expiry
         $pdo = Database::getInstance();
         $stmt = $pdo->prepare("SELECT * FROM password_resets WHERE token = ? AND expires_at > NOW()");
         $stmt->execute([$token]);
         if (!$stmt->fetch()) {
-             $error = "This link is invalid or has expired.";
-             require_once __DIR__ . '/../../views/reset_password.php';
-             return;
+             header('Location: /forgot-password?error=invalid_token');
+             exit;
         }
 
         require_once __DIR__ . '/../../views/reset_password.php';
@@ -289,8 +290,8 @@ class AuthController {
             header('Location: /login');
             exit;
         } else {
-            $error = "Invalid or expired token.";
-            require_once __DIR__ . '/../../views/reset_password.php';
+            header('Location: /forgot-password?error=invalid_token');
+            exit;
         }
     }
 

@@ -18,6 +18,11 @@
 <body>
     <div class="login-box">
         <h2>Trustabee</h2>
+        <?php if (isset($_GET['success']) && $_GET['success'] === 'password_reset'): ?>
+            <div style="color: green; font-size: 0.9rem; text-align: center; margin-bottom: 10px;">
+                Password reset successful. Please login.
+            </div>
+        <?php endif; ?>
         <?php if (isset($error)): ?>
             <div class="error"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>

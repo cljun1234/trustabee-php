@@ -251,6 +251,11 @@
             </a>
         </li>
         <li class="nav-item">
+            <a href="/admin/tokens" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'tokens') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-key"></i> Partner Tokens
+            </a>
+        </li>
+        <li class="nav-item">
             <a href="/admin/email" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'email') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-envelope"></i> Manage Email
             </a>

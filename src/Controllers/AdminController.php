@@ -41,6 +41,7 @@ class AdminController {
 
         $id = $_POST['id'] ?? null;
         $name = $_POST['name'];
+        $display_name = $_POST['display_name'] ?? null;
         $price = $_POST['monthly_price'];
         $visit_limit = $_POST['visit_limit'];
         $domain_limit = $_POST['domain_limit'];
@@ -63,15 +64,56 @@ class AdminController {
         $pdo = Database::getInstance();
 
         if ($id) {
-            $stmt = $pdo->prepare("UPDATE plans SET name=?, monthly_price=?, visit_limit=?, domain_limit=?, features=? WHERE id=?");
-            $stmt->execute([$name, $price, $visit_limit, $domain_limit, $featuresJson, $id]);
+            $stmt = $pdo->prepare("UPDATE plans SET name=?, display_name=?, monthly_price=?, visit_limit=?, domain_limit=?, features=? WHERE id=?");
+            $stmt->execute([$name, $display_name, $price, $visit_limit, $domain_limit, $featuresJson, $id]);
         } else {
             // Create new
-            $stmt = $pdo->prepare("INSERT INTO plans (name, monthly_price, visit_limit, domain_limit, features) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$name, $price, $visit_limit, $domain_limit, $featuresJson]);
+            $stmt = $pdo->prepare("INSERT INTO plans (name, display_name, monthly_price, visit_limit, domain_limit, features) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $display_name, $price, $visit_limit, $domain_limit, $featuresJson]);
         }
 
         header('Location: /admin/plans');
+    }
+
+    public function tokens() {
+        $this->checkAdmin();
+        $pdo = Database::getInstance();
+        $stmt = $pdo->query("SELECT * FROM partner_tokens ORDER BY created_at DESC");
+        $tokens = $stmt->fetchAll();
+
+        $pageTitle = 'Partner Tokens';
+        $activePage = 'admin';
+        $activeSubPage = 'tokens';
+
+        require_once __DIR__ . '/../../views/admin/tokens.php';
+    }
+
+    public function saveToken() {
+        $this->checkAdmin();
+        $pdo = Database::getInstance();
+
+        $name = $_POST['name'];
+        $allowed_domains = $_POST['allowed_domains'];
+
+        // Generate a token if not provided (though we are creating new ones mostly)
+        // If it's a new token
+        $token = bin2hex(random_bytes(16)); // 32 chars
+
+        $stmt = $pdo->prepare("INSERT INTO partner_tokens (name, token, allowed_domains) VALUES (?, ?, ?)");
+        $stmt->execute([$name, $token, $allowed_domains]);
+
+        header('Location: /admin/tokens');
+    }
+
+    public function deleteToken() {
+        $this->checkAdmin();
+        $pdo = Database::getInstance();
+        $id = $_POST['id'];
+
+        $stmt = $pdo->prepare("DELETE FROM partner_tokens WHERE id = ?");
+        $stmt->execute([$id]);
+
+        header('Location: /admin/tokens');
     }
 
     public function users() {

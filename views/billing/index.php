@@ -4,7 +4,7 @@
 
     <!-- Plan Overview -->
     <div class="card" style="text-align: center; border-top: 4px solid var(--primary-color);">
-        <h2 style="border: none;">Current Plan: <span style="color: var(--primary-color); font-size: 1.5rem;"><?php echo htmlspecialchars($plan['name']); ?></span></h2>
+        <h2 style="border: none;">Current Plan: <span style="color: var(--primary-color); font-size: 1.5rem;"><?php echo htmlspecialchars(!empty($plan['display_name']) ? $plan['display_name'] : $plan['name']); ?></span></h2>
         <p style="font-size: 1.2rem; font-weight: bold;">$<?php echo $plan['monthly_price']; ?> <span style="font-size: 0.9rem; font-weight: normal;">/ month</span></p>
         <p class="text-muted">Next billing cycle: <strong><?php echo date('F d, Y', strtotime($nextReset)); ?></strong></p>
     </div>

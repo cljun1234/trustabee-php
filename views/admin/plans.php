@@ -13,8 +13,12 @@
 
                 <div style="display: flex; gap: 20px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                     <div style="flex: 1;">
-                        <label>Plan Name</label>
+                        <label>Plan Name (Internal)</label>
                         <input type="text" name="name" value="<?php echo htmlspecialchars($plan['name']); ?>" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Display Name (Public/Billing)</label>
+                        <input type="text" name="display_name" value="<?php echo htmlspecialchars($plan['display_name'] ?? ''); ?>" placeholder="Optional, defaults to Internal Name">
                     </div>
                     <div style="width: 100px;">
                         <label>Price ($)</label>
@@ -89,6 +93,10 @@
                 <div class="form-group">
                     <label>Name</label>
                     <input type="text" name="name" placeholder="e.g. Enterprise" required>
+                </div>
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" name="display_name" placeholder="Optional">
                 </div>
                 <div class="form-group">
                     <label>Price</label>

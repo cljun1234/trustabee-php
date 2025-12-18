@@ -98,34 +98,32 @@ class PartnerController {
                 $stmt->execute([$userId]);
                 $user = $stmt->fetch();
 
-                // AUTO-CREATE WIDGET if host is available
-                // This solves "No widget found" error on first login
-                if ($validatedHost) {
-                    $widgetName = $validatedHost;
-                    $stmt = $pdo->prepare("INSERT INTO widgets (user_id, domain, name, magical_detection, created_at) VALUES (?, ?, ?, 1, NOW())");
-                    $stmt->execute([$userId, $validatedHost, $widgetName]);
-                } else {
-                    // Fallback if no referer (e.g. direct link test), maybe create a placeholder?
-                    // "My First Widget"
-                    $stmt = $pdo->prepare("INSERT INTO widgets (user_id, domain, name, magical_detection, created_at) VALUES (?, 'example.com', 'My First Widget', 1, NOW())");
-                    $stmt->execute([$userId]);
-                }
-
             } catch (Exception $e) {
                 $this->showError("Registration failed: " . $e->getMessage());
                 return;
             }
         } else {
             // Login existing user
-            // Optional: Upgrade them to Sponsored if they are on a lower plan?
-            // The prompt says "register them if they not found, login them if found".
-            // It doesn't explicitly say "Force Sponsored Plan" for existing users.
-            // But usually "Sponsored works is they are registered through a magic link... mark as sponsored".
-            // I will assume if they login via this link, we might want to ensure they have the perks?
-            // "in database those register with magic link will mark as sponsored" -> sounds like registration time.
-            // I'll stick to just logging them in if they exist, to avoid overwriting a paying user's plan inadvertently,
-            // UNLESS logic dictates otherwise. User said "those register... mark as sponsored".
-            // If they are already registered, I won't change their plan unless explicitly asked.
+            // Check if they need plan upgrade (optional, but requested implicitly by "those register with magic link will mark as sponsored")
+            // But let's focus on the widget issue first.
+        }
+
+        // 4.5 Ensure Widget Exists
+        // This logic is now shared for both new and existing users
+        $userId = $user['id'];
+
+        // Check if user has any widgets
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM widgets WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $widgetCount = $stmt->fetchColumn();
+
+        if ($widgetCount == 0) {
+            // Create default widget
+            $widgetName = $validatedHost ?: 'My First Widget';
+            $widgetDomain = $validatedHost ?: 'example.com';
+
+            $stmt = $pdo->prepare("INSERT INTO widgets (user_id, domain, name, magical_detection, created_at) VALUES (?, ?, ?, 1, NOW())");
+            $stmt->execute([$userId, $widgetDomain, $widgetName]);
         }
 
         // 5. Login Session

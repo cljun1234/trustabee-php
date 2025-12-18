@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(50) DEFAULT 'user', -- 'user', 'owner'
     plan_id INT DEFAULT 1,
     subscription_start DATE DEFAULT NULL,
+    verified BOOLEAN DEFAULT 0,
+    last_login TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -356,6 +358,34 @@ CREATE TABLE IF NOT EXISTS review_analytics (
     FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
 );
 
+-- 15. SYSTEM SETTINGS
+CREATE TABLE IF NOT EXISTS system_settings (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value TEXT
+);
+
+-- 16. LOGIN OTPS
+CREATE TABLE IF NOT EXISTS login_otps (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    otp_code VARCHAR(10),
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 17. PASSWORD RESETS
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX (email),
+    INDEX (token)
+);
+
+
 -- =================================================================
 -- UPDATER STORED PROCEDURE (SAFE ADD COLUMNS)
 -- =================================================================
@@ -363,7 +393,7 @@ DROP PROCEDURE IF EXISTS upgrade_trustabee_db;
 DELIMITER //
 CREATE PROCEDURE upgrade_trustabee_db()
 BEGIN
-    -- 1. USERS: Add role, plan_id, subscription_start
+    -- 1. USERS: Add role, plan_id, subscription_start, verified, last_login
     IF NOT EXISTS(SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='role') THEN
         ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user';
     END IF;
@@ -372,6 +402,12 @@ BEGIN
     END IF;
     IF NOT EXISTS(SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='subscription_start') THEN
         ALTER TABLE users ADD COLUMN subscription_start DATE DEFAULT NULL;
+    END IF;
+    IF NOT EXISTS(SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='verified') THEN
+        ALTER TABLE users ADD COLUMN verified BOOLEAN DEFAULT 0;
+    END IF;
+    IF NOT EXISTS(SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='last_login') THEN
+        ALTER TABLE users ADD COLUMN last_login TIMESTAMP NULL DEFAULT NULL;
     END IF;
 
     -- 2. WIDGETS: Add allowed_domains, timezone, and live feature flags

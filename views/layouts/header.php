@@ -250,6 +250,11 @@
                 <i class="fa-solid fa-clipboard-list"></i> Manage Plans
             </a>
         </li>
+        <li class="nav-item">
+            <a href="/admin/email" class="nav-link <?php echo ($activePage == 'admin' && $activeSubPage == 'email') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-envelope"></i> Manage Email
+            </a>
+        </li>
         <?php endif; ?>
     </ul>
 

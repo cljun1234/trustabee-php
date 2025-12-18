@@ -121,4 +121,35 @@ class AdminController {
 
         header('Location: /admin/users');
     }
+
+    public function emailSettings() {
+        $this->checkAdmin();
+        $pdo = Database::getInstance();
+
+        // Fetch current settings
+        $stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings");
+        $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        $pageTitle = 'Manage Email';
+        $activePage = 'admin';
+        $activeSubPage = 'email';
+
+        require_once __DIR__ . '/../../views/admin/email_settings.php';
+    }
+
+    public function saveEmailSettings() {
+        $this->checkAdmin();
+        $pdo = Database::getInstance();
+
+        $keys = ['mailgun_api_key', 'mailgun_domain', 'mailgun_from_email'];
+
+        foreach ($keys as $key) {
+            $value = $_POST[$key] ?? '';
+            // Insert or Update
+            $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+            $stmt->execute([$key, $value, $value]);
+        }
+
+        header('Location: /admin/email');
+    }
 }

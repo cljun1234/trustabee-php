@@ -385,6 +385,17 @@ CREATE TABLE IF NOT EXISTS password_resets (
     INDEX (token)
 );
 
+-- 18. USER DEVICES (Trusted Devices)
+CREATE TABLE IF NOT EXISTS user_devices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    device_token VARCHAR(255) NOT NULL,
+    last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX (device_token)
+);
+
 
 -- =================================================================
 -- UPDATER STORED PROCEDURE (SAFE ADD COLUMNS)

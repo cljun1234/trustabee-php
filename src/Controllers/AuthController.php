@@ -23,13 +23,13 @@ class AuthController {
         $user = $stmt->fetch();
 
         if ($user && password_verify($password, $user['password'])) {
-            // Check verification and last login
             $verified = $user['verified'] ?? 0;
-            $lastLogin = $user['last_login'] ? strtotime($user['last_login']) : 0;
-            $oneWeekAgo = time() - (7 * 24 * 60 * 60);
 
-            // Require OTP if not verified OR last login > 1 week ago
-            if (!$verified || $lastLogin < $oneWeekAgo) {
+            // Check Trusted Device
+            $isDeviceTrusted = $this->isDeviceTrusted($user['id']);
+
+            // Require OTP if not verified OR device not trusted
+            if (!$verified || !$isDeviceTrusted) {
                 // Generate OTP
                 $otp = rand(100000, 999999);
                 $expiresAt = date('Y-m-d H:i:s', time() + 900); // 15 mins
@@ -50,6 +50,10 @@ class AuthController {
             }
 
             // Success - Login
+            // Extend trust if already trusted
+            if ($isDeviceTrusted) {
+                $this->refreshDeviceTrust($user['id']);
+            }
             $this->finalizeLogin($user);
 
         } else {
@@ -69,6 +73,46 @@ class AuthController {
 
         header('Location: /');
         exit;
+    }
+
+    private function isDeviceTrusted($userId) {
+        if (!isset($_COOKIE['trusted_device'])) {
+            return false;
+        }
+
+        $token = $_COOKIE['trusted_device'];
+        $pdo = Database::getInstance();
+        $stmt = $pdo->prepare("SELECT id FROM user_devices WHERE user_id = ? AND device_token = ?");
+        $stmt->execute([$userId, $token]);
+
+        return (bool) $stmt->fetch();
+    }
+
+    private function registerTrustedDevice($userId) {
+        // Generate Token
+        $token = bin2hex(random_bytes(32));
+
+        // Save to DB
+        $pdo = Database::getInstance();
+        $stmt = $pdo->prepare("INSERT INTO user_devices (user_id, device_token) VALUES (?, ?)");
+        $stmt->execute([$userId, $token]);
+
+        // Set Cookie (1 week)
+        $expires = time() + (7 * 24 * 60 * 60);
+        setcookie('trusted_device', $token, $expires, '/', '', false, true); // secure=false for local dev, httponly=true
+    }
+
+    private function refreshDeviceTrust($userId) {
+        if (isset($_COOKIE['trusted_device'])) {
+            $token = $_COOKIE['trusted_device'];
+            $expires = time() + (7 * 24 * 60 * 60);
+            setcookie('trusted_device', $token, $expires, '/', '', false, true);
+
+            // Update DB timestamp
+            $pdo = Database::getInstance();
+            $stmt = $pdo->prepare("UPDATE user_devices SET last_used_at = NOW() WHERE user_id = ? AND device_token = ?");
+            $stmt->execute([$userId, $token]);
+        }
     }
 
     public function showRegister() {
@@ -163,6 +207,9 @@ class AuthController {
             // Mark user verified
             $stmtUpd = $pdo->prepare("UPDATE users SET verified = 1 WHERE id = ?");
             $stmtUpd->execute([$user_id]);
+
+            // Register Trusted Device
+            $this->registerTrustedDevice($user_id);
 
             // Login
             $stmtUser = $pdo->prepare("SELECT * FROM users WHERE id = ?");
@@ -286,8 +333,8 @@ class AuthController {
             $stmtDelete = $pdo->prepare("DELETE FROM password_resets WHERE token = ?");
             $stmtDelete->execute([$token]);
 
-            // Redirect to login
-            header('Location: /login');
+            // Redirect to login with success
+            header('Location: /login?success=password_reset');
             exit;
         } else {
             header('Location: /forgot-password?error=invalid_token');
@@ -297,6 +344,8 @@ class AuthController {
 
     public function logout() {
         session_destroy();
+        // Clear cookie
+        setcookie('trusted_device', '', time() - 3600, '/');
         header('Location: /login');
     }
 }

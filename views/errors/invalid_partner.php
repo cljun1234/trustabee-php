@@ -4,54 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access Denied - Trustabee</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f4f6f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .card {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-        }
-        h1 {
-            color: #e74c3c;
-            margin-top: 0;
-        }
-        p {
-            color: #555;
-            line-height: 1.5;
-            margin-bottom: 30px;
-        }
-        .btn {
-            display: inline-block;
-            background-color: #3498db;
-            color: white;
-            padding: 12px 24px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        .btn:hover {
-            background-color: #2980b9;
-        }
+        body { font-family: 'Roboto', sans-serif; }
     </style>
 </head>
-<body>
-    <div class="card">
-        <h1>Access Denied</h1>
-        <p><?php echo htmlspecialchars($message ?? 'You are not authorized to view this page.'); ?></p>
-        <a href="/" class="btn">Go to Home Page</a>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-100 max-w-md w-full text-center">
+        <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fa-solid fa-ban text-2xl text-red-500"></i>
+        </div>
+
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+        <p class="text-gray-600 mb-8 leading-relaxed">
+            <?php echo htmlspecialchars($message ?? 'You are not authorized to view this page.'); ?>
+        </p>
+
+        <a href="/" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm w-full sm:w-auto">
+            Go to Home Page
+        </a>
     </div>
 </body>
 </html>

@@ -1,345 +1,190 @@
 <?php
 $activePage = 'campaigns';
 $activeSubPage = 'social';
-$pageTitle = 'Social Popup';
-include __DIR__ . '/../layouts/header.php';
+$pageTitle = 'Social Widget';
+require_once __DIR__ . '/../layouts/header.php';
+
+// Check feature access
+$plan = PlanManager::getUserPlan($_SESSION['user_id']);
+$isAllowed = !empty($plan['features']['socials']);
+$brandingAllowed = !empty($plan['features']['remove_branding']);
+
+// Constants
+$PLATFORMS = SocialController::PLATFORMS_CONFIG;
 ?>
 
-<style>
-/* Switch Toggle CSS */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 26px;
-}
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
-  border-radius: 34px;
-}
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 3px; bottom: 3px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-}
-input:checked + .slider { background-color: var(--primary-color); }
-input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
-input:checked + .slider:before { transform: translateX(24px); }
-.form-group.toggle { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.form-group.toggle label { margin-bottom: 0; font-size: 1.1rem; font-weight: 600; }
+<?php if (!$isAllowed): ?>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-12 text-center mt-6">
+        <i class="fa-solid fa-lock text-5xl text-gray-300 mb-6 block"></i>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Feature Locked</h2>
+        <p class="text-gray-600 mb-6">Your current plan does not include Social Widgets.</p>
+        <a href="/billing" class="inline-block bg-primary hover:bg-primary-hover text-white font-medium py-2 px-6 rounded-lg transition-colors">Upgrade Plan</a>
+    </div>
+    <?php require_once __DIR__ . '/../layouts/footer.php'; exit; ?>
+<?php endif; ?>
 
-/* Widget Preview Styles */
-.widget-preview-container {
-    margin-top: 30px;
-    padding: 30px;
-    background: #f4f6f8;
-    border: 1px dashed #ccc;
-    border-radius: 8px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 400px; /* Ensure space for the popup */
-}
-</style>
+<div class="max-w-6xl mx-auto">
 
-    <!-- Active Toggle Card -->
-    <div class="card mb-4">
-        <div class="form-group toggle" style="margin-bottom: 0; padding: 10px 0;">
-            <div style="display: flex; flex-direction: column;">
-                <label style="margin-bottom: 5px;">Enable Social Popup</label>
-                <span style="font-size: 0.9rem; color: #666; font-weight: normal;">Show this widget on your website.</span>
-            </div>
-            <label class="switch">
-                <input type="checkbox" onchange="toggleSocialWidget(<?php echo $social['id']; ?>, this.checked)" <?php echo $social['active'] ? 'checked' : ''; ?>>
-                <span class="slider"></span>
+    <!-- Top Header -->
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Social Widget</h2>
+            <p class="text-sm text-gray-500">Configure your social media links and widget appearance.</p>
+        </div>
+
+        <!-- Global Enable Toggle -->
+        <div class="flex items-center bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm">
+            <span class="mr-3 text-sm font-medium text-gray-700">Enable Widget</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="globalToggle" class="sr-only peer" <?php echo ($social['active'] ?? 0) ? 'checked' : ''; ?> onchange="toggleWidget(this.checked, <?php echo $social['id'] ?? 0; ?>)">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
         </div>
     </div>
 
-    <form action="/api/social/save" method="POST">
-        <input type="hidden" name="social_id" value="<?php echo $social['id']; ?>">
+    <form action="/campaigns/social/save" method="POST" class="space-y-6">
+        <input type="hidden" name="social_id" value="<?php echo $social['id'] ?? ''; ?>">
 
-        <!-- Content Settings -->
-        <div class="card mb-4">
-            <div class="card-header">Content & Preview</div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                         <div class="mb-3">
-                            <label class="form-label">Title (Badge)</label>
-                            <input type="text" class="form-control" name="title" value="<?php echo htmlspecialchars($social['title']); ?>" oninput="updatePreview()">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Subtitle</label>
-                            <input type="text" class="form-control" name="subtitle" value="<?php echo htmlspecialchars($social['subtitle']); ?>" oninput="updatePreview()">
-                        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                        <!-- Position Selector -->
-                        <div class="mb-3">
-                            <label class="form-label">Popup Position</label>
-                            <select class="form-select" name="position" id="positionSelect" onchange="updatePreview()">
-                                <option value="bottom-right" <?php echo ($social['position'] ?? 'bottom-right') === 'bottom-right' ? 'selected' : ''; ?>>Bottom Right</option>
-                                <option value="bottom-left" <?php echo ($social['position'] ?? 'bottom-right') === 'bottom-left' ? 'selected' : ''; ?>>Bottom Left</option>
+            <!-- Left: Settings -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Appearance Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">Appearance</h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Widget Title</label>
+                            <input type="text" name="title" value="<?php echo htmlspecialchars($social['title'] ?? 'Follow Us'); ?>" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2.5 border">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Subtitle</label>
+                            <input type="text" name="subtitle" value="<?php echo htmlspecialchars($social['subtitle'] ?? ''); ?>" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2.5 border">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                            <select name="position" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2.5 border bg-white">
+                                <option value="bottom-right" <?php echo ($social['position'] ?? '') == 'bottom-right' ? 'selected' : ''; ?>>Bottom Right</option>
+                                <option value="bottom-left" <?php echo ($social['position'] ?? '') == 'bottom-left' ? 'selected' : ''; ?>>Bottom Left</option>
                             </select>
                         </div>
 
-                        <div class="form-group toggle mt-4">
-                             <label style="font-size: 1rem; font-weight: normal;">Remove Branding</label>
-                             <label class="switch">
-                                <input type="checkbox" name="remove_branding" id="removeBranding"
-                                       <?php echo $social['remove_branding'] ? 'checked' : ''; ?> onchange="updatePreview()">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label text-muted">Live Preview</label>
-                        <div class="widget-preview-container">
-                            <!-- The Mock Widget -->
-                            <!-- Note: The position in Preview is fixed for display purposes, but we can simulate the "look" -->
-                            <div id="previewWidget" style="background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); font-family: sans-serif; overflow: hidden; width: 300px;">
-
-                                <!-- Header -->
-                                <div style="padding: 15px; text-align: center; border-bottom: 1px solid #f0f0f0; position: relative;">
-                                    <div style="position: absolute; top: 10px; right: 15px; color: #999;">&times;</div>
-                                    <span id="previewTitle" style="background: #4ade80; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 8px;">
-                                        <?php echo htmlspecialchars($social['title']); ?>
-                                    </span>
-                                    <p id="previewSubtitle" style="margin: 0; font-size: 13px; color: #666; line-height: 1.4; padding: 0 10px;">
-                                        <?php echo htmlspecialchars($social['subtitle']); ?>
-                                    </p>
-                                </div>
-
-                                <!-- Links -->
-                                <div id="previewLinks" style="padding: 15px;">
-                                    <!-- Links injected by JS -->
-                                </div>
-
-                                <!-- Footer -->
-                                <div id="previewBranding" style="text-align: center; padding-bottom: 10px; font-size: 10px; color: #1a73e8; display: <?php echo $social['remove_branding'] ? 'none' : 'block'; ?>;">
-                                    Verified by Trustabee
-                                </div>
+                        <div class="flex items-center pt-2">
+                            <div class="flex h-5 items-center">
+                                <input id="remove_branding" name="remove_branding" type="checkbox" <?php if(!$brandingAllowed) echo 'disabled'; ?> <?php if(!empty($social['remove_branding'])) echo 'checked'; ?> class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="remove_branding" class="font-medium text-gray-700 <?php if(!$brandingAllowed) echo 'opacity-50'; ?>">Remove Branding</label>
+                                <?php if(!$brandingAllowed): ?>
+                                    <span class="text-xs text-red-500 block">Upgrade required</span>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Social Links -->
-        <div class="card mb-4">
-            <div class="card-header">
-                Social Networks
-                <span class="float-end text-muted" style="font-size: 0.9rem;">Select up to 5 platforms</span>
-                <span id="limit-warning" class="text-danger float-end me-2" style="display:none; font-size: 0.9rem; font-weight: bold;">Limit Reached (5/5)</span>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-12">
-                <?php foreach ($platformsConfig as $platform => $config):
-                    $link = $links_map[$platform] ?? null;
-                    $isActive = $link && $link['is_active'];
-                    $url = $link['url'] ?? '';
-                    $label = $link['label_text'] ?? "Join us on " . ucfirst($platform);
-                    $faIcon = $config['icon'];
-                ?>
-                <div class="mb-3 border rounded p-3 bg-white">
-                    <!-- Row Header: Toggle | Icon | Name -->
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <label class="switch scale-75" style="transform: scale(0.8); margin-bottom: 0;">
-                                <input type="checkbox" class="platform-toggle"
-                                       name="platform_<?php echo $platform; ?>_active"
-                                       id="toggle_<?php echo $platform; ?>"
-                                       data-platform="<?php echo $platform; ?>"
-                                       <?php echo $isActive ? 'checked' : ''; ?>
-                                       onchange="handlePlatformToggle(this)">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="d-flex align-items-center" style="min-width: 150px;">
-                            <i class="fa-brands <?php echo $faIcon; ?>" style="font-size: 1.2rem; margin-right: 12px; color: #555; width: 24px; text-align: center;"></i>
-                            <span style="font-weight: 600; font-size: 1rem;"><?php echo ucfirst($platform); ?></span>
-                        </div>
-                    </div>
-
-                    <!-- Expanded Settings (Fields Below) -->
-                    <div id="settings_<?php echo $platform; ?>" style="display: <?php echo $isActive ? 'block' : 'none'; ?>; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee;">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label class="form-label" style="font-size: 0.8rem; margin-bottom: 2px;">Link URL</label>
-                                <input type="text" class="form-control"
-                                       name="platform_<?php echo $platform; ?>_url"
-                                       placeholder="https://..."
-                                       value="<?php echo htmlspecialchars($url); ?>"
-                                       oninput="updatePreview()">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" style="font-size: 0.8rem; margin-bottom: 2px;">Button Label</label>
-                                <input type="text" class="form-control"
-                                       name="platform_<?php echo $platform; ?>_label"
-                                       placeholder="Label"
-                                       value="<?php echo htmlspecialchars($label); ?>"
-                                       oninput="updatePreview()">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Triggers -->
-        <div class="card mb-4">
-            <div class="card-header">Triggers & Rules</div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                         <div class="mb-3">
-                            <label class="form-label">Trigger Type</label>
-                            <select class="form-select" name="trigger_type">
-                                <option value="delay" <?php echo $social['trigger_type'] === 'delay' ? 'selected' : ''; ?>>Time Delay</option>
-                                <option value="exit_intent" <?php echo $social['trigger_type'] === 'exit_intent' ? 'selected' : ''; ?>>Exit Intent</option>
+                <!-- Triggers Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">Rules</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Trigger</label>
+                            <select name="trigger_type" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2.5 border bg-white">
+                                <option value="delay" <?php echo ($social['trigger_type'] ?? '') == 'delay' ? 'selected' : ''; ?>>Time Delay</option>
+                                <option value="exit_intent" <?php echo ($social['trigger_type'] ?? '') == 'exit_intent' ? 'selected' : ''; ?>>Exit Intent</option>
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Delay (seconds)</label>
-                            <input type="number" class="form-control" name="trigger_delay" value="<?php echo $social['trigger_delay']; ?>">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Delay (Seconds)</label>
+                            <input type="number" name="trigger_delay" value="<?php echo (int)($social['trigger_delay'] ?? 0); ?>" min="0" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2.5 border">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                            <select name="frequency" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2.5 border bg-white">
+                                <option value="every_load" <?php echo ($social['frequency'] ?? '') == 'every_load' ? 'selected' : ''; ?>>Every Page Load</option>
+                                <option value="session" <?php echo ($social['frequency'] ?? '') == 'session' ? 'selected' : ''; ?>>Once per Session</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Frequency</label>
-                            <select class="form-select" name="frequency">
-                                <option value="session" <?php echo $social['frequency'] === 'session' ? 'selected' : ''; ?>>Once per Session (unless closed)</option>
-                                <option value="every_load" <?php echo $social['frequency'] === 'every_load' ? 'selected' : ''; ?>>Every Page Load</option>
-                            </select>
-                            <small class="text-muted d-block mt-1">If user clicks 'X', it will stay hidden for the session.</small>
+                </div>
+
+                <button type="submit" class="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors sticky bottom-4">
+                    Save Changes
+                </button>
+            </div>
+
+            <!-- Right: Platforms List -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+                        <h3 class="text-lg font-bold text-gray-800">Social Platforms</h3>
+                        <p class="text-xs text-gray-500 mt-1">Enable and configure the platforms you want to display.</p>
+                    </div>
+
+                    <div class="divide-y divide-gray-100">
+                        <?php foreach ($PLATFORMS as $key => $config):
+                            // Check if this platform has an entry in $links_map
+                            $linkData = $links_map[$key] ?? null;
+                            $isActive = $linkData && $linkData['is_active'];
+                            $urlValue = $linkData ? $linkData['url'] : '';
+                            $labelValue = $linkData ? $linkData['label_text'] : ucfirst($key);
+                        ?>
+                        <div class="p-4 sm:p-6 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-start sm:items-center gap-4">
+                                <!-- Icon -->
+                                <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white" style="background-color: <?php echo $config['color']; ?>;">
+                                    <i class="<?php echo $config['icon']; ?> text-lg"></i>
+                                </div>
+
+                                <div class="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <!-- Toggle & Label -->
+                                    <div class="flex items-center justify-between sm:justify-start sm:gap-4">
+                                        <span class="font-bold text-gray-700 w-24 capitalize"><?php echo $key; ?></span>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="platform_<?php echo $key; ?>_active" class="sr-only peer" <?php echo $isActive ? 'checked' : ''; ?> onchange="toggleInputs('<?php echo $key; ?>', this.checked)">
+                                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Inputs Container -->
+                                    <div id="inputs_<?php echo $key; ?>" class="grid grid-cols-1 gap-2 <?php echo $isActive ? '' : 'opacity-50 pointer-events-none'; ?>">
+                                        <input type="text" name="platform_<?php echo $key; ?>_url" value="<?php echo htmlspecialchars($urlValue); ?>" placeholder="Profile URL (e.g. https://...)" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-sm p-2 border">
+                                        <input type="text" name="platform_<?php echo $key; ?>_label" value="<?php echo htmlspecialchars($labelValue); ?>" placeholder="Label (e.g. Follow us)" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-xs p-2 border">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
         </div>
-
-        <button type="submit" class="btn btn-primary btn-lg w-100 mb-5">Save Changes</button>
-
     </form>
+</div>
 
 <script>
-function toggleSocialWidget(id, enabled) {
-    fetch('/api/social/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: id, enabled: enabled })
-    });
-}
-
-function handlePlatformToggle(el) {
-    const platform = el.dataset.platform;
-    const settingsDiv = document.getElementById('settings_' + platform);
-    settingsDiv.style.display = el.checked ? 'block' : 'none';
-
-    validateLimit(el);
-    updatePreview();
-}
-
-function validateLimit(changedEl) {
-    const checked = document.querySelectorAll('.platform-toggle:checked');
-    const warning = document.getElementById('limit-warning');
-
-    if (checked.length > 5) {
-        if (changedEl) changedEl.checked = false;
-        // Re-hide the settings for the one we just forced off
-        if (changedEl) {
-             const platform = changedEl.dataset.platform;
-             document.getElementById('settings_' + platform).style.display = 'none';
-        }
-        alert("You can only select up to 5 social networks.");
+    function toggleWidget(enabled, id) {
+        fetch('/campaigns/social/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: enabled, id: id })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(!data.success) alert('Error saving state');
+        })
+        .catch(err => alert('Network error'));
     }
 
-    // Check again after potential reversal
-    const finalChecked = document.querySelectorAll('.platform-toggle:checked');
-    if (finalChecked.length >= 5) {
-        warning.style.display = 'inline';
-    } else {
-        warning.style.display = 'none';
-    }
-}
-
-// Inject PHP config into JS
-const platformsConfig = <?php echo json_encode($platformsConfig); ?>;
-
-function updatePreview() {
-    // Texts
-    document.getElementById('previewTitle').textContent = document.querySelector('input[name="title"]').value;
-    document.getElementById('previewSubtitle').textContent = document.querySelector('input[name="subtitle"]').value;
-
-    // Branding
-    const removeBranding = document.getElementById('removeBranding').checked;
-    document.getElementById('previewBranding').style.display = removeBranding ? 'none' : 'block';
-
-    // Links
-    const linksContainer = document.getElementById('previewLinks');
-    linksContainer.innerHTML = '';
-
-    Object.keys(platformsConfig).forEach(p => {
-        const config = platformsConfig[p];
-        const toggle = document.getElementById('toggle_' + p);
-        if (toggle && toggle.checked) {
-            // Note: PHP variable names are platform_${p}_url.
-            const urlInput = document.querySelector(`input[name="platform_${p}_url"]`);
-            const labelInput = document.querySelector(`input[name="platform_${p}_label"]`);
-
-            const url = urlInput ? urlInput.value : '';
-            // If label is empty, capitalize the platform name
-            const label = (labelInput && labelInput.value) ? labelInput.value : (p.charAt(0).toUpperCase() + p.slice(1));
-
-            const item = document.createElement('div');
-            item.style.cssText = `
-                display: flex; align-items: center; text-decoration: none;
-                padding: 10px; margin-bottom: 8px; border: 1px dashed #ddd;
-                border-radius: 8px; color: #333; font-size: 14px; background: white;
-            `;
-
-            const iconColor = config.color;
-            const iconClass = config.icon;
-
-            // Special case for snapchat icon color (black on yellow)
-            const iconTextColor = (p === 'snapchat') ? 'black' : 'white';
-
-            item.innerHTML = `
-                <span style="width: 24px; height: 24px; background: \${iconColor}; border-radius: 4px; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                     <i class="fa-brands ${iconClass}" style="font-size: 14px; color: ${iconTextColor};"></i>
-                </span>
-                <span style="font-weight: 500;">\${label}</span>
-            `;
-
-            linksContainer.appendChild(item);
+    function toggleInputs(key, checked) {
+        const container = document.getElementById('inputs_' + key);
+        if (checked) {
+            container.classList.remove('opacity-50', 'pointer-events-none');
+        } else {
+            container.classList.add('opacity-50', 'pointer-events-none');
         }
-    });
-}
-
-// Init
-document.addEventListener('DOMContentLoaded', () => {
-    updatePreview();
-    // Run limit check initially
-    const warning = document.getElementById('limit-warning');
-    const checked = document.querySelectorAll('.platform-toggle:checked');
-    if (checked.length >= 5) warning.style.display = 'inline';
-});
+    }
 </script>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

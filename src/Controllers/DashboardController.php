@@ -144,6 +144,9 @@ class DashboardController {
             case 'live-conversion':
                 $controllerName = 'LiveConversionController';
                 break;
+            case 'low-stock':
+                $controllerName = 'LowStockController';
+                break;
         }
 
         if ($controllerName) {

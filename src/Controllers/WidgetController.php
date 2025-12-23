@@ -65,6 +65,8 @@ class WidgetController {
     let newsletters = [];
     let socials = [];
     let reviewConfig = null;
+    let lowStockConfig = null;
+    let lowStockItems = [];
     let currentIndex = 0;
     let widgetElement;
     let timerId;
@@ -121,6 +123,13 @@ class WidgetController {
             if (json.review_config && json.review_config.active == 1) {
                 reviewConfig = json.review_config;
                 checkReviews();
+            }
+
+            // Store Low Stock
+            if (json.low_stock_config && json.low_stock_items && json.low_stock_items.length > 0) {
+                 lowStockConfig = json.low_stock_config;
+                 lowStockItems = json.low_stock_items;
+                 checkLowStock();
             }
 
             // Build queue
@@ -267,6 +276,19 @@ class WidgetController {
         }
     }
 
+    function trackLowStockEvent(itemId, eventType) {
+        const payload = new URLSearchParams();
+        payload.append('w', WIDGET_ID);
+        payload.append('iid', itemId);
+        payload.append('type', eventType);
+
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(`\${API_BASE}/track-low-stock`, payload);
+        } else {
+            fetch(`\${API_BASE}/track-low-stock`, { method: 'POST', body: payload });
+        }
+    }
+
     // --- Shared Logic ---
 
     function setupTrigger(item, showCallback) {
@@ -316,7 +338,8 @@ class WidgetController {
             ANNOUNCEMENT_CONTAINER_ID,
             VIDEO_CONTAINER_ID,
             NEWSLETTER_CONTAINER_ID,
-            REVIEW_CONTAINER_ID
+            REVIEW_CONTAINER_ID,
+            LOW_STOCK_CONTAINER_ID
         ];
         for (const id of ids) {
             if (document.getElementById(id)) return true;
@@ -1170,6 +1193,175 @@ class WidgetController {
 
     // --- Generic Modal Builder ---
 
+    // --- Low Stock Logic ---
+
+    function checkLowStock() {
+        if (!lowStockConfig || !lowStockItems.length) return;
+
+        // Start Rotation Cycle
+        let index = 0;
+        const delay = (lowStockConfig.loop_delay || 10) * 1000;
+
+        function next() {
+            const item = lowStockItems[index];
+            showLowStock(item, () => {
+                index = (index + 1) % lowStockItems.length;
+                setTimeout(next, delay);
+            });
+        }
+
+        // Initial Delay
+        setTimeout(next, 2000);
+    }
+
+    function calculateStock(item) {
+        if (lowStockConfig.stock_behavior === 'fixed') {
+            return item.stock_value || 10;
+        } else {
+            // Pseudo Random Deterministic Logic
+            // Seed = Date String + Item ID
+            const dateStr = new Date().toISOString().split('T')[0];
+            const seedStr = dateStr + '_item_' + item.id;
+
+            // Simple hash function
+            let hash = 0;
+            for (let i = 0; i < seedStr.length; i++) {
+                const char = seedStr.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            const seed = Math.abs(hash);
+
+            const min = parseInt(lowStockConfig.random_min) || 5;
+            const max = parseInt(lowStockConfig.random_max) || 20;
+
+            // Pseudo-random range based on seed
+            const randomFactor = (seed % 1000) / 1000;
+            const startStock = Math.floor(randomFactor * (max - min + 1)) + min;
+
+            // Decay based on time of day
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const totalMinutes = (hours * 60) + minutes;
+
+            // Decay logic: Drop 1 every X minutes or spread across 14 hours (8am-10pm)
+            // Let's say we want to drop 50% of the difference between Start and Min over 12 hours.
+            // Simpler: Drop 1 stock every 2 hours
+            const decay = Math.floor(hours / 2);
+
+            let current = startStock - decay;
+            if (current < min) current = min; // Clamp to min
+
+            return current;
+        }
+    }
+
+    function showLowStock(item, onComplete) {
+        if (isAnyModalOpen()) {
+             setTimeout(() => showLowStock(item, onComplete), 2000);
+             return;
+        }
+
+        const stockCount = calculateStock(item);
+        const design = JSON.parse(lowStockConfig.design_settings || '{}');
+        const bgColor = design.bg_color || '#ffffff';
+        const textColor = design.text_color || '#333333';
+        const position = lowStockConfig.position || 'bottom-left';
+
+        // Container Style
+        let posStyle = 'bottom: 20px; left: 20px;';
+        if (position === 'bottom-right') posStyle = 'bottom: 20px; right: 20px;';
+        if (position === 'top-left') posStyle = 'top: 20px; left: 20px;';
+        if (position === 'top-right') posStyle = 'top: 20px; right: 20px;';
+
+        const container = document.createElement('div');
+        container.id = LOW_STOCK_CONTAINER_ID;
+        container.style.cssText = `
+            position: fixed; \${posStyle} z-index: 10000;
+            background: \${bgColor}; color: \${textColor};
+            padding: 15px; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            font-family: sans-serif; display: flex; align-items: center;
+            max-width: 320px; opacity: 0; transform: translateY(20px);
+            transition: all 0.5s ease; cursor: pointer;
+        `;
+
+        // Click Action
+        container.onclick = () => {
+            trackLowStockEvent(item.id, 'click');
+            if (item.product_url) {
+                window.open(item.product_url, '_blank');
+            }
+        };
+
+        // Image
+        if (item.image_url) {
+            const img = document.createElement('img');
+            img.src = API_BASE.replace('/api', '') + item.image_url;
+            img.style.cssText = 'width: 50px; height: 50px; border-radius: 4px; object-fit: cover; margin-right: 15px;';
+            container.appendChild(img);
+        } else {
+             // Placeholder
+             const ph = document.createElement('div');
+             ph.style.cssText = 'width: 50px; height: 50px; border-radius: 4px; background: #eee; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #aaa;';
+             ph.textContent = '!';
+             container.appendChild(ph);
+        }
+
+        // Text Content
+        const textDiv = document.createElement('div');
+        textDiv.style.flex = '1';
+
+        const title = document.createElement('div');
+        title.textContent = item.name;
+        title.style.fontWeight = 'bold';
+        title.style.fontSize = '14px';
+        title.style.marginBottom = '4px';
+        textDiv.appendChild(title);
+
+        const sub = document.createElement('div');
+        sub.innerHTML = `<span style="color: #e02424; font-weight: bold;">Only \${stockCount} left</span> in stock!`;
+        sub.style.fontSize = '13px';
+        textDiv.appendChild(sub);
+
+        container.appendChild(textDiv);
+
+        // Close Button (Tiny)
+        const close = document.createElement('div');
+        close.innerHTML = '&times;';
+        close.style.cssText = 'position: absolute; top: 5px; right: 5px; font-size: 16px; opacity: 0.5; cursor: pointer; line-height: 1; padding: 2px;';
+        close.onclick = (e) => {
+            e.stopPropagation();
+            closeWidget();
+        };
+        container.appendChild(close);
+
+        document.body.appendChild(container);
+
+        // Show
+        requestAnimationFrame(() => {
+            container.style.opacity = '1';
+            container.style.transform = 'translateY(0)';
+        });
+
+        trackLowStockEvent(item.id, 'view');
+
+        function closeWidget() {
+             container.style.opacity = '0';
+             container.style.transform = 'translateY(20px)';
+             setTimeout(() => {
+                 container.remove();
+                 if (onComplete) onComplete();
+             }, 500);
+        }
+
+        // Auto Close
+        setTimeout(closeWidget, 6000); // Show for 6 seconds
+    }
+
+    // --- Generic Modal Builder ---
+
     function createModal(containerId, item, contentCallback) {
         const modal = document.createElement('div');
         modal.id = containerId;
@@ -1533,6 +1725,18 @@ JS;
         $reviews_config = $stmt->fetch();
         if ($reviews_config && !$canRemoveBranding) $reviews_config['remove_branding'] = 0;
 
+        // Fetch Low Stock Config & Items
+        $stmt = $pdo->prepare("SELECT * FROM low_stock_settings WHERE widget_id = ? AND active = 1");
+        $stmt->execute([$widget_id]);
+        $low_stock_config = $stmt->fetch();
+        $low_stock_items = [];
+
+        if ($low_stock_config) {
+             $stmt = $pdo->prepare("SELECT * FROM low_stock_items WHERE widget_id = ? AND active = 1");
+             $stmt->execute([$widget_id]);
+             $low_stock_items = $stmt->fetchAll();
+        }
+
         $review_items = [];
         if ($reviews_config) {
              if ($reviews_config['show_reviews_widget']) {
@@ -1607,6 +1811,8 @@ JS;
             'newsletters' => $newsletters,
             'socials' => $socials,
             'review_config' => $reviews_config,
+            'low_stock_config' => $low_stock_config,
+            'low_stock_items' => $low_stock_items,
             'live_count' => $live_count,
             'historical_count' => $historical_count,
             'notifications' => $notifications
@@ -1800,6 +2006,21 @@ JS;
         $stmt->execute([$review_id, $type]);
 
         if ($type === 'view_popup' || $type === 'view') $this->incrementImpression($widget_id);
+    }
+
+    public function trackLowStock() {
+        $this->addCors();
+        $widget_id = $_POST['w'] ?? 0;
+        $item_id = $_POST['iid'] ?? 0;
+        $type = $_POST['type'] ?? 'unknown'; // 'view' or 'click'
+
+        if (!$widget_id || !$item_id) return;
+
+        $pdo = Database::getInstance();
+        $stmt = $pdo->prepare("INSERT INTO low_stock_analytics (item_id, event_type, created_at) VALUES (?, ?, NOW())");
+        $stmt->execute([$item_id, $type]);
+
+        if ($type === 'view') $this->incrementImpression($widget_id);
     }
 
     public function submitReview() {

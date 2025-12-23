@@ -478,3 +478,40 @@ CALL upgrade_trustabee_db();
 
 -- Clean up
 DROP PROCEDURE upgrade_trustabee_db;
+
+-- 20. LOW STOCK SETTINGS
+CREATE TABLE IF NOT EXISTS low_stock_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    widget_id INT NOT NULL,
+    active BOOLEAN DEFAULT 1,
+    position VARCHAR(50) DEFAULT 'bottom-left',
+    loop_delay INT DEFAULT 5, -- Time between products in rotation
+    design_settings TEXT DEFAULT NULL, -- JSON for colors
+    stock_behavior VARCHAR(50) DEFAULT 'random', -- 'fixed' or 'random'
+    random_min INT DEFAULT 5,
+    random_max INT DEFAULT 20,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (widget_id) REFERENCES widgets(id) ON DELETE CASCADE
+);
+
+-- 21. LOW STOCK ITEMS
+CREATE TABLE IF NOT EXISTS low_stock_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    widget_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    image_url VARCHAR(255) DEFAULT NULL,
+    product_url VARCHAR(255) DEFAULT NULL,
+    stock_value INT DEFAULT 10,
+    active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (widget_id) REFERENCES widgets(id) ON DELETE CASCADE
+);
+
+-- 22. LOW STOCK ANALYTICS
+CREATE TABLE IF NOT EXISTS low_stock_analytics (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    item_id INT NOT NULL,
+    event_type VARCHAR(50) NOT NULL, -- 'view', 'click'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (item_id) REFERENCES low_stock_items(id) ON DELETE CASCADE
+);
